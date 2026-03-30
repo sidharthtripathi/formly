@@ -8,26 +8,41 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export default function LoginPage() {
+export default function SignupPage() {
   const router = useRouter();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleEmailPassword = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
 
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      setIsLoading(false);
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const { error: signInError } = await clientAuth.signIn.email({
+      const { error: signUpError } = await clientAuth.signUp.email({
         email,
         password,
+        name,
         callbackURL: "/",
       });
-      if (signInError) {
-        setError(signInError.message || "Failed to sign in");
+      if (signUpError) {
+        setError(signUpError.message || "Failed to create account");
       } else {
         router.push("/");
       }
@@ -42,15 +57,25 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center space-y-6 max-w-md mx-auto p-6 w-full">
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold">Welcome to Formly</h1>
+          <h1 className="text-3xl font-bold">Create your account</h1>
           <p className="text-muted-foreground">
-            AI-powered form builder. Create, publish, and manage forms with
-            natural language.
+            Start building AI-powered forms today.
           </p>
         </div>
 
         {/* Email/Password Form */}
-        <form onSubmit={handleEmailPassword} className="space-y-4">
+        <form onSubmit={handleSignup} className="space-y-4">
+          <div className="space-y-2 text-left">
+            <Label htmlFor="name">Name</Label>
+            <Input
+              id="name"
+              type="text"
+              placeholder="Your name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
           <div className="space-y-2 text-left">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -67,9 +92,20 @@ export default function LoginPage() {
             <Input
               id="password"
               type="password"
-              placeholder="Your password"
+              placeholder="At least 6 characters"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2 text-left">
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              placeholder="Repeat your password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               required
             />
           </div>
@@ -79,7 +115,7 @@ export default function LoginPage() {
           )}
 
           <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-            {isLoading ? "Signing in..." : "Sign in with Email"}
+            {isLoading ? "Creating account..." : "Create Account"}
           </Button>
         </form>
 
@@ -121,9 +157,9 @@ export default function LoginPage() {
         </Button>
 
         <p className="text-sm text-muted-foreground">
-          Don&apos;t have an account?{" "}
-          <Link href="/signup" className="text-primary hover:underline">
-            Sign up
+          Already have an account?{" "}
+          <Link href="/login" className="text-primary hover:underline">
+            Sign in
           </Link>
         </p>
       </div>

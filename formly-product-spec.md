@@ -174,7 +174,7 @@ Formly must support all standard field types the AI can generate and the user ca
 | Backend Framework | Elysia on Bun | Type-safe, blazing fast, Eden treaty for type-safe client |
 | Database | PostgreSQL (self-hosted via Docker) | ACID, JSON support, relational responses |
 | ORM | Drizzle ORM | Type-safe, Bun-compatible, SQL-first |
-| Auth | better-auth | Google OAuth, database sessions, lighter than NextAuth |
+| Auth | better-auth | Google OAuth + Email/Password, database sessions, lighter than NextAuth |
 | Payments | Stripe | Subscription management |
 | AI | MiniMax M2.7 via Anthropic SDK | Streaming form generation and analysis |
 | File Storage | **Unified storage service** — local Docker volume or S3 (toggle via `STORAGE_MODE` env) | Simple for local dev, S3-compatible for production |
@@ -192,7 +192,8 @@ formly/
 │   ├── web/                          # Next.js 15 frontend
 │   │   ├── app/
 │   │   │   ├── (auth)/
-│   │   │   │   └── login/            # Google OAuth login page
+│   │   │   │   ├── login/            # Login page (Google OAuth + email/password)
+│   │   │   │   └── signup/           # Signup page (Google OAuth + email/password)
 │   │   │   ├── (dashboard)/
 │   │   │   │   ├── page.tsx          # Home screen (prompt box)
 │   │   │   │   ├── builder/
@@ -430,15 +431,22 @@ CREATE INDEX idx_marketplace_upvotes ON marketplace_listings(upvote_count DESC);
 ## 6. Authentication
 
 ### Strategy
-- **Google OAuth only** — for both creators and respondents
-- **better-auth** handles OAuth flow on the Next.js side
+- **Google OAuth + Email/Password** — for both creators and respondents
+- **better-auth** handles auth on the Next.js side
 - **Database sessions** — session stored in DB, passed as `Authorization: Bearer <token>` to the Elysia API
 - The API validates the session token against the DB
 
 ### Session Flow
 ```
+# Email/Password
+User → Sign up with Email/Password → Create user in DB → Issue session token
+User → Sign in with Email/Password → Validate credentials → Issue session token
+
+# Google OAuth
 User → "Sign in with Google" → Google OAuth → better-auth callback
 → Create/update user in DB → Issue session token
+
+# API Authorization
 → Subsequent API calls include Authorization header
 → Elysia middleware validates token → attaches user to context
 ```
@@ -825,7 +833,7 @@ Conditions are stored per-field in `field.conditions[]`. The form renderer evalu
 │  ○ Anyone (Anonymous)                   │
 │    No login required for respondents    │
 │  ● Authenticated Users Only             │
-│    Respondents must sign in with Google │
+│    Respondents must sign in (Google or Email/Password) │
 │                                         │
 │  Allow multiple submissions?            │
 │  [Toggle: OFF]                          │
@@ -861,7 +869,7 @@ Conditions are stored per-field in `field.conditions[]`. The form renderer evalu
 
 **Access Control:**
 - If `form.is_anonymous = true` → anyone can access, no login needed
-- If `form.is_anonymous = false` → middleware redirects to Google sign-in, then back to the form
+- If `form.is_anonymous = false` → middleware redirects to sign-in, then back to the form
 
 **Filler UX:**
 ```
@@ -1087,7 +1095,7 @@ All endpoints return `application/json`. AI endpoints use `text/event-stream` (S
 
 ### Authentication Header
 ```
-Authorization: Bearer <nextauth_jwt_token>
+Authorization: Bearer <session_token>
 ```
 
 ### Routes
