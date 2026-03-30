@@ -7,16 +7,19 @@
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "dependsOn": ["^build"]
     },
     "lint": {
       "cache": false
     },
     "db:migrate": {
-      "cache": false
+      "cache": false,
+      "outputs": ["apps/server/drizzle/**"]
     },
     "db:push": {
-      "cache": false
+      "cache": false,
+      "outputs": ["apps/server/drizzle/**"]
     },
     "db:studio": {
       "cache": false

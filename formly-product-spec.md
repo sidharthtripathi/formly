@@ -1,7 +1,7 @@
 # Formly — Full Product Specification
-**Version:** 1.1  
-**Date:** March 2026  
-**Stack:** Next.js 15 · Elysia/Bun · PostgreSQL · Turborepo · Vercel / Docker Compose  
+**Version:** 2.0
+**Date:** March 2026
+**Stack:** Next.js 15 · Express/Node.js · PostgreSQL · Turborepo · NextAuth.js v5
 **AI Model:** MiniMax M2.7 via Anthropic SDK  
 
 ---
@@ -147,10 +147,11 @@ Formly must support all standard field types the AI can generate and the user ca
 │                      Turborepo Monorepo                   │
 │                                                          │
 │  ┌─────────────────┐       ┌──────────────────────────┐  │
-│  │  apps/web        │       │  apps/api                 │  │
-│  │  Next.js 15      │◄─────►│  Elysia + Bun             │  │
+│  │  apps/web        │       │  server/                   │  │
+│  │  Next.js 15      │◄─────►│  Express + Node.js         │  │
 │  │  App Router      │  HTTP │  REST + SSE               │  │
-│  │  Shadcn + Motion │       │  Anthropic SDK (MiniMax)  │  │
+│  │  NextAuth.js v5  │       │  Anthropic SDK (MiniMax)  │  │
+│  │  shadcn/ui (v1)  │       │  JWT auth middleware      │  │
 │  └─────────────────┘       └──────────┬───────────────┘  │
 │                                        │                   │
 │  ┌─────────────────┐       ┌──────────▼───────────────┐  │
@@ -167,20 +168,18 @@ Formly must support all standard field types the AI can generate and the user ca
 | Concern | Technology | Reason |
 |---------|-----------|--------|
 | Frontend | Next.js 15 (App Router) | Server components, streaming, Vercel-native |
-| UI Components | shadcn/ui + Tailwind | Accessible, composable, customisable |
+| UI Components | shadcn/ui v1 (pure defaults) | Accessible, composable, no custom Tailwind |
 | Animations | Framer Motion | Smooth split-editor transitions, AI streaming |
 | Server State | TanStack Query (React Query) v5 | Caching, optimistic updates, SSE hooks |
 | Client State | Zustand | Lightweight, no boilerplate (replaces Recoil) |
-| Backend Framework | Elysia on Bun | Type-safe, blazing fast, Eden treaty for type-safe client |
+| Backend Framework | Express on Node.js | Mature, widely used, great SSE support |
 | Database | PostgreSQL (self-hosted via Docker) | ACID, JSON support, relational responses |
-| ORM | Drizzle ORM | Type-safe, Bun-compatible, SQL-first |
-| Auth | better-auth | Google OAuth + Email/Password, database sessions, lighter than NextAuth |
+| ORM | Drizzle ORM | Type-safe, SQL-first |
+| Auth | NextAuth.js v5 | Google OAuth + Credentials, JWT sessions |
 | Payments | Stripe | Subscription management |
 | AI | MiniMax M2.7 via Anthropic SDK | Streaming form generation and analysis |
 | File Storage | **Unified storage service** — local Docker volume or S3 (toggle via `STORAGE_MODE` env) | Simple for local dev, S3-compatible for production |
 | Email | Resend | Transactional (form submission confirmations) |
-
-> **Note on Zustand vs Recoil:** Zustand is recommended over Recoil because Recoil is no longer actively maintained by Meta. Zustand is smaller, simpler, and works perfectly with React Query for this use case.
 
 ---
 
@@ -189,75 +188,68 @@ Formly must support all standard field types the AI can generate and the user ca
 ```
 formly/
 ├── apps/
-│   ├── web/                          # Next.js 15 frontend
-│   │   ├── app/
-│   │   │   ├── (auth)/
-│   │   │   │   ├── login/            # Login page (Google OAuth + email/password)
-│   │   │   │   └── signup/           # Signup page (Google OAuth + email/password)
-│   │   │   ├── (dashboard)/
-│   │   │   │   ├── page.tsx          # Home screen (prompt box)
-│   │   │   │   ├── builder/
-│   │   │   │   │   └── [formId]/     # Split-editor builder
-│   │   │   │   ├── templates/        # Personal saved templates
-│   │   │   │   ├── marketplace/      # Public template marketplace
-│   │   │   │   └── forms/
-│   │   │   │       └── [formId]/
-│   │   │   │           ├── responses/  # Response viewer
-│   │   │   │           └── analytics/  # AI analysis chat
-│   │   │   ├── f/
-│   │   │   │   └── [publicSlug]/     # Public form filler (no auth wrapper)
-│   │   │   └── api/
-│   │   │       └── auth/             # better-auth route handlers
-│   │   ├── components/
-│   │   │   ├── ui/                   # shadcn components
-│   │   │   ├── builder/              # Editor-specific components
-│   │   │   ├── filler/               # Form filling components
-│   │   │   ├── marketplace/
-│   │   │   └── analytics/
-│   │   ├── hooks/                    # Custom React hooks
-│   │   ├── lib/
-│   │   │   ├── api-client.ts         # Elysia Eden treaty client
-│   │   │   ├── auth.ts               # better-auth config
-│   │   │   └── query-client.ts
-│   │   └── stores/                   # Zustand stores
-│   │
-│   └── api/                          # Elysia + Bun backend
-│       ├── src/
-│       │   ├── index.ts              # App entry point
-│       │   ├── routes/
-│       │   │   ├── forms.ts
-│       │   │   ├── ai.ts             # AI streaming endpoints (SSE)
-│       │   │   ├── responses.ts
-│       │   │   ├── templates.ts
-│       │   │   ├── marketplace.ts
-│       │   │   ├── users.ts
-│       │   │   ├── stripe.ts
-│       │   │   ├── uploads.ts        # File upload (local or S3)
-│       │   │   ├── webhooks.ts      # Webhook delivery
-│       │   │   └── static.ts        # Local file serving
-│       │   ├── db/
-│       │   │   ├── schema.ts         # Drizzle schema
-│       │   │   ├── schema-extensions.ts # Webhooks, themes, collaborators
-│       │   │   ├── migrations/
-│       │   │   └── index.ts          # DB connection
-│       │   ├── services/
-│       │   │   ├── ai.service.ts     # MiniMax calls via Anthropic SDK
-│       │   │   ├── storage.ts        # Unified storage (local/S3)
-│       │   │   ├── form.service.ts
-│       │   │   ├── export.service.ts # CSV/Excel generation
-│       │   │   └── stripe.service.ts
-│       │   └── middleware/
-│       │       ├── auth.ts           # JWT validation
-│       │       └── rate-limit.ts
-│       └── Dockerfile
+│   └── web/                          # Next.js 15 frontend
+│       ├── app/
+│       │   ├── (auth)/
+│       │   │   ├── login/            # Login page (Google OAuth + email/password)
+│       │   │   └── signup/           # Signup page (Google OAuth + email/password)
+│       │   ├── (dashboard)/
+│       │   │   ├── page.tsx          # Home screen (prompt box)
+│       │   │   ├── builder/
+│       │   │   │   └── [formId]/     # Split-editor builder
+│       │   │   ├── templates/        # Personal saved templates
+│       │   │   ├── marketplace/      # Public template marketplace
+│       │   │   └── forms/
+│       │   │       └── [formId]/
+│       │   │           ├── responses/  # Response viewer
+│       │   │           └── analytics/  # AI analysis chat
+│       │   ├── f/
+│       │   │   └── [publicSlug]/     # Public form filler (no auth wrapper)
+│       │   └── api/
+│       │       └── auth/             # NextAuth.js v5 route handlers
+│       ├── components/
+│       │   ├── ui/                   # shadcn components (pure defaults)
+│       │   ├── builder/              # Editor-specific components
+│       │   ├── filler/               # Form filling components
+│       │   ├── marketplace/
+│       │   └── analytics/
+│       ├── hooks/                    # Custom React hooks
+│       ├── lib/
+│       │   ├── auth.ts               # NextAuth.js v5 config
+│       │   ├── api-helpers.ts        # authedFetch helper
+│       │   └── db.ts                 # Database connection
+│       └── stores/                   # Zustand stores
 │
 ├── packages/
 │   └── shared/
-│       ├── types/
-│       │   ├── form-schema.ts        # The canonical FormSchema type
-│       │   └── api.ts                # Shared API types
-│       └── utils/
-│           └── form-validators.ts
+│       ├── db/
+│       │   └── schema.ts             # Drizzle schema (shared)
+│       └── types/
+│           ├── form-schema.ts        # The canonical FormSchema type
+│           └── api.ts                # Shared API types
+│
+├── server/                           # Express API server
+│   ├── src/
+│   │   ├── index.ts                  # App entry point
+│   │   ├── routes/
+│   │   │   ├── forms.ts
+│   │   │   ├── ai.ts                 # AI streaming endpoints (SSE)
+│   │   │   ├── responses.ts
+│   │   │   ├── templates.ts
+│   │   │   ├── marketplace.ts
+│   │   │   ├── users.ts
+│   │   │   ├── stripe.ts
+│   │   │   ├── uploads.ts            # File upload (local or S3)
+│   │   │   ├── webhooks.ts           # Webhook delivery with SSRF protection
+│   │   │   └── static.ts             # Local file serving
+│   │   ├── middleware/
+│   │   │   ├── auth.ts               # JWT + X-User-Id validation
+│   │   │   └── rate-limit.ts
+│   │   ├── services/
+│   │   │   └── storage.ts            # Unified storage (local/S3)
+│   │   └── db/
+│   │       └── index.ts              # DB connection
+│   └── drizzle.config.ts
 │
 ├── docker-compose.yml
 ├── docker-compose.prod.yml
@@ -432,23 +424,23 @@ CREATE INDEX idx_marketplace_upvotes ON marketplace_listings(upvote_count DESC);
 
 ### Strategy
 - **Google OAuth + Email/Password** — for both creators and respondents
-- **better-auth** handles auth on the Next.js side
-- **Database sessions** — session stored in DB, passed as `Authorization: Bearer <token>` to the Elysia API
-- The API validates the session token against the DB
+- **NextAuth.js v5** handles auth on the Next.js side with JWT sessions
+- **X-User-Id header** — frontend sends user ID to Express API for validation
+- The API validates the user via database lookup on each request
 
 ### Session Flow
 ```
 # Email/Password
-User → Sign up with Email/Password → Create user in DB → Issue session token
-User → Sign in with Email/Password → Validate credentials → Issue session token
+User → Sign up with Email/Password → Create user in DB → Issue JWT session
+User → Sign in with Email/Password → Validate credentials → Issue JWT session
 
 # Google OAuth
-User → "Sign in with Google" → Google OAuth → better-auth callback
-→ Create/update user in DB → Issue session token
+User → "Sign in with Google" → Google OAuth → NextAuth callback
+→ Create/update user in DB → Issue JWT session
 
 # API Authorization
-→ Subsequent API calls include Authorization header
-→ Elysia middleware validates token → attaches user to context
+→ Subsequent API calls include X-User-Id header
+→ Express middleware validates user via DB lookup
 ```
 
 ### Protected Routes
@@ -1089,13 +1081,14 @@ The sidebar is present on all creator routes (`/`, `/builder/*`, `/templates`, `
 
 ## 8. API Design
 
-Base URL: `https://api.formly.app` (prod) or `http://localhost:3001` (local)
+Base URL: `https://api.formly.app` (prod) or `http://localhost:3001` (local Express server)
 
 All endpoints return `application/json`. AI endpoints use `text/event-stream` (SSE).
 
-### Authentication Header
+### Authentication
 ```
-Authorization: Bearer <session_token>
+X-User-Id: <user_id_from_session>   # Primary method - set by frontend from NextAuth session
+Authorization: Bearer <jwt_token>    # Fallback method - JWT validation
 ```
 
 ### Routes
@@ -1113,33 +1106,24 @@ GET    /api/forms/public/:slug       # Get published form (no auth)
 
 #### AI — Form Generation (SSE)
 ```
-POST   /api/ai/generate              # Generate form from prompt (streams FormSchema)
-POST   /api/ai/modify                # Modify form with prompt (streams diff/new schema)
+GET    /api/ai/generate?prompt=...   # Generate form from prompt (streams FormSchema via SSE)
+POST   /api/ai/modify                # Modify form with prompt (streams via SSE, POST body)
 ```
 
 **SSE Event Format for form generation:**
 ```
 event: schema_delta
-data: { "op": "set_field", "field": { ...FormField } }
-
-event: schema_delta
-data: { "op": "set_title", "value": "Customer Feedback Form" }
+data: { "text": "..." }
 
 event: done
-data: { "schema": { ...complete FormSchema } }
+data: {}
 ```
 
 #### Responses
 ```
 POST   /api/forms/:id/responses      # Submit a form response (public endpoint, auth optional)
 GET    /api/forms/:id/responses      # Get all responses (paginated, creator only)
-GET    /api/forms/:id/responses/export?format=csv  # Export CSV
-```
-
-#### AI Analysis (SSE, Pro only)
-```
-POST   /api/forms/:id/analysis/chat  # Send message, stream AI response
-GET    /api/forms/:id/analysis       # Get conversation history
+GET    /api/forms/:id/responses/export  # Export CSV
 ```
 
 #### Templates
@@ -1161,11 +1145,11 @@ POST   /api/marketplace/:id/copy     # Copy to personal templates
 
 #### Users & Billing
 ```
-GET    /api/users/me                 # Get current user (plan, usage, credits_used, credits_reset_at)
+GET    /api/users/me                 # Get current user (plan, usage, credits)
 GET    /api/users/me/credits         # Get current AI credit status { used, limit, resetsAt }
 POST   /api/stripe/create-checkout   # Create Stripe checkout session
 POST   /api/stripe/portal            # Open Stripe billing portal
-POST   /api/stripe/webhook           # Stripe webhook handler
+POST   /webhooks/stripe              # Stripe webhook handler
 ```
 
 #### File Storage (Local or S3 — unified via STORAGE_MODE)
@@ -1264,60 +1248,59 @@ Form schema: [injected]
 Response data summary: [injected — aggregate counts, not raw PII for anonymous forms]
 ```
 
-### Streaming Implementation (SSE in Elysia)
+### Streaming Implementation (SSE in Express)
 
 ```typescript
-// apps/api/src/routes/ai.ts
-app.post('/api/ai/generate', async ({ body, set }) => {
-  set.headers['Content-Type'] = 'text/event-stream';
-  set.headers['Cache-Control'] = 'no-cache';
+// server/src/routes/ai.ts
+router.get('/generate', async (req, res) => {
+  const prompt = req.query.prompt as string;
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
 
   const stream = await client.messages.stream({
-    model: 'minimax-m2.7',
+    model: 'MiniMax-M2.7',
     max_tokens: 4096,
     system: GENERATION_SYSTEM_PROMPT,
-    messages: [{ role: 'user', content: body.prompt }],
+    messages: [{ role: 'user', content: prompt }],
   });
 
-  return new Response(
-    new ReadableStream({
-      async start(controller) {
-        for await (const chunk of stream) {
-          controller.enqueue(`data: ${JSON.stringify(chunk)}\n\n`);
-        }
-        controller.enqueue('event: done\ndata: {}\n\n');
-        controller.close();
-      }
-    }),
-    { headers: set.headers }
-  );
+  for await (const chunk of stream) {
+    if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
+      res.write(`event: schema_delta\ndata: ${JSON.stringify({ text: chunk.delta.text })}\n\n`);
+      res.flush();
+    }
+  }
+
+  res.write('event: done\ndata: {}\n\n');
+  res.end();
 });
 ```
 
 ### Frontend SSE Consumption
 
 ```typescript
-// hooks/useFormGeneration.ts
-import { useEffect } from 'react';
-import { useFormStore } from '@/stores/formStore';
+// apps/web/hooks/useAI.ts
+export function useFormGeneration(formId: string) {
+  const generate = useCallback(async (prompt: string) => {
+    const params = new URLSearchParams({ prompt });
+    const es = new EventSource(`${AI_API_URL}/api/ai/generate?${params}`);
 
-export function useFormGeneration(prompt: string) {
-  const { setSchema, applyDelta } = useFormStore();
-
-  useEffect(() => {
-    const es = new EventSource(`/api/ai/generate?prompt=${encodeURIComponent(prompt)}`);
-    
     es.addEventListener('schema_delta', (e) => {
-      applyDelta(JSON.parse(e.data));
+      const delta = JSON.parse(e.data);
+      content += delta.text || '';
     });
-    
-    es.addEventListener('done', (e) => {
-      setSchema(JSON.parse(e.data).schema);
+
+    es.addEventListener('done', () => {
+      const schema = JSON.parse(content);
+      setSchema(schema);
       es.close();
     });
+  }, []);
 
-    return () => es.close();
-  }, [prompt]);
+  return { generate };
 }
 ```
 
@@ -1432,18 +1415,36 @@ interface FormStore {
 ['user', 'me']                           // current user + plan
 ```
 
-### API Client (Elysia Eden Treaty)
+### API Client (Express fetch wrapper)
 
 ```typescript
-// lib/api-client.ts
-import { treaty } from '@elysiajs/eden';
-import type { App } from '../../api/src/index';  // type import only
+// apps/web/lib/api-helpers.ts
+export async function authedFetch<T = unknown>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const session = await auth();
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    ...options.headers,
+  };
 
-export const api = treaty<App>(process.env.NEXT_PUBLIC_API_URL!);
+  // Include user ID for server-side JWT validation
+  if (session?.user?.id) {
+    headers["X-User-Id"] = session.user.id;
+  }
 
-// Usage in components:
-const { data } = await api.forms.get();        // fully type-safe
-await api.forms({ id }).patch({ schema });      // type-safe patch
+  const res = await fetch(`${API_URL}${endpoint}`, {
+    ...options,
+    headers,
+  });
+
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
+
+  return res.json();
+}
 ```
 
 ### Component Architecture
@@ -1503,7 +1504,6 @@ components/
 
 ```yaml
 # docker-compose.yml
-version: '3.9'
 services:
   web:
     build:
@@ -1513,15 +1513,15 @@ services:
       - "3000:3000"
     env_file: .env
     depends_on:
-      - api
+      - server
       - postgres
     volumes:
       - uploads_data:/app/uploads  # Local upload storage
 
-  api:
+  server:
     build:
       context: .
-      dockerfile: apps/api/Dockerfile
+      dockerfile: server/Dockerfile
     ports:
       - "3001:3001"
     env_file: .env
@@ -1548,24 +1548,24 @@ volumes:
 ```
 
 ```dockerfile
-# apps/api/Dockerfile
-FROM oven/bun:1 AS base
+# server/Dockerfile
+FROM node:20-alpine AS base
 WORKDIR /app
 COPY package.json bun.lockb ./
-COPY apps/api/package.json apps/api/
+COPY server/package.json server/
 COPY packages/shared/package.json packages/shared/
 RUN bun install --frozen-lockfile
 COPY . .
-CMD ["bun", "run", "apps/api/src/index.ts"]
+CMD ["bun", "run", "server/src/index.ts"]
 ```
 
 ### Vercel Deployment
 
 - `apps/web` → Vercel project (Next.js)
-- `apps/api` → Vercel Serverless Functions **or** a separate Fly.io / Railway deployment (recommended: Railway for Elysia, since Vercel serverless has cold-start issues with Bun + long-lived SSE)
-- PostgreSQL → Neon (managed Postgres, Vercel-native) **or** keep self-hosted on Railway with a Docker volume
+- `server` → Railway or fly.io (Node.js, Express with Docker)
+- PostgreSQL → Neon (managed Postgres) or self-hosted on Railway
 
-> **Recommendation for Vercel + Bun:** Deploy the Elysia API to **Railway** (Docker-based, native Bun support, persistent Postgres volume). Deploy Next.js to Vercel. This gives the best of both worlds.
+> **Recommendation:** Deploy Express API to **Railway** (Docker-based, persistent). Deploy Next.js to **Vercel**. Use **Neon** for managed PostgreSQL.
 
 ### Turbo Build Pipeline
 
@@ -1581,7 +1581,7 @@ CMD ["bun", "run", "apps/api/src/index.ts"]
       "cache": false,
       "persistent": true
     },
-    "db:migrate": {
+    "db:push": {
       "cache": false
     }
   }
@@ -1610,9 +1610,9 @@ AWS_REGION=us-east-1                # AWS region
 AWS_S3_BUCKET=formly-uploads        # S3 bucket name
 # AWS_S3_ENDPOINT=                  # Optional: custom S3 endpoint (MinIO, Backblaze, etc.)
 
-# Auth
-AUTH_SECRET=                        # better-auth secret (auto-generated if blank)
-GOOGLE_CLIENT_ID=                  # Google OAuth client ID
+# Auth (NextAuth.js v5)
+AUTH_SECRET=                        # NextAuth secret (generate: openssl rand -base64 32)
+GOOGLE_CLIENT_ID=                   # Google OAuth client ID
 GOOGLE_CLIENT_SECRET=               # Google OAuth client secret
 
 # Database
@@ -1627,14 +1627,14 @@ ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic
 
 # Stripe
 STRIPE_SECRET_KEY=                 # Stripe secret key
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY= # Stripe publishable key
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY= # Stripe publishable key (optional for frontend)
 STRIPE_WEBHOOK_SECRET=             # Stripe webhook signing secret
 STRIPE_PRO_PRICE_ID=               # Stripe price ID for $12/month Pro plan
 
 # App
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_API_URL=http://localhost:3001
-API_URL=http://localhost:3001       # Server-side
+SERVER_URL=http://localhost:3001     # Server-side API URL
 
 # Email — Resend (optional)
 RESEND_API_KEY=
@@ -1644,7 +1644,7 @@ RESEND_API_KEY=
 
 | Variable | Required | Auto-Generated |
 |----------|----------|----------------|
-| `AUTH_SECRET` | No | ✅ Generated by better-auth if blank |
+| `AUTH_SECRET` | No | ✅ Generated by NextAuth if blank |
 | `GOOGLE_CLIENT_ID` | **Yes** | — |
 | `GOOGLE_CLIENT_SECRET` | **Yes** | — |
 | `DATABASE_URL` | Yes | ✅ Default: localhost Docker postgres |

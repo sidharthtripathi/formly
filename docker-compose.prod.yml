@@ -6,15 +6,15 @@ services:
     restart: unless-stopped
     env_file: .env
     depends_on:
-      - api
+      - server
       - postgres
     networks:
       - formly
 
-  api:
+  server:
     build:
       context: .
-      dockerfile: apps/api/Dockerfile
+      dockerfile: apps/server/Dockerfile
     restart: unless-stopped
     env_file: .env
     depends_on:
@@ -27,7 +27,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: formly
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-formlypassword}
       POSTGRES_DB: formly
     volumes:
       - postgres_data:/var/lib/postgresql/data
