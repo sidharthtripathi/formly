@@ -9,10 +9,20 @@ const AUTH_PATHS = ["/login", "/signup"];
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // AUTH_SECRET is required for JWT verification at Edge Runtime
+  const authSecret = process.env.AUTH_SECRET;
+  if (!authSecret) {
+    console.error("Missing AUTH_SECRET environment variable");
+    return NextResponse.json(
+      { error: "Server configuration error" },
+      { status: 500 }
+    );
+  }
+
   // Get JWT token - this works at Edge Runtime without database
   const token = await getToken({
     req: request,
-    secret: process.env.AUTH_SECRET,
+    secret: authSecret,
   });
 
   // Check if the path is public
