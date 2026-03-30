@@ -46,14 +46,14 @@ export function Sidebar() {
   const { data: forms, isLoading } = useForms() as { data: FormListItem[] | undefined; isLoading: boolean };
   const deleteForm = useDeleteForm();
   const [open, setOpen] = useState(true);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   return (
     <>
       {/* Toggle Button (mobile) */}
       <button
         onClick={() => setOpen(!open)}
-        className="fixed top-4 left-4 z-50 p-2 bg-background border rounded-md shadow-sm lg:hidden"
+        className="fixed top-4 left-4 z-[60] p-2 bg-background border rounded-md shadow-sm lg:hidden"
       >
         {open ? <X className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
       </button>
@@ -61,7 +61,8 @@ export function Sidebar() {
       {/* Collapsed toggle (desktop) */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="hidden lg:flex fixed top-4 left-64 z-40 p-2 bg-background border rounded-md shadow-sm hover:bg-muted transition-colors"
+        className="hidden lg:flex fixed top-4 z-[60] p-2 bg-background border rounded-md shadow-sm hover:bg-muted transition-colors"
+        style={{ left: isCollapsed ? "4px" : "284px" }}
       >
         {isCollapsed ? <FileText className="w-4 h-4" /> : <X className="w-4 h-4" />}
       </button>
@@ -75,8 +76,8 @@ export function Sidebar() {
           }}
           transition={{ duration: 0.3, ease: "easeInOut" }}
           className={cn(
-            "fixed lg:static inset-y-0 left-0 z-40 bg-background border-r overflow-hidden",
-            open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+            "fixed inset-y-0 left-0 z-40 bg-background border-r overflow-hidden",
+            open ? "translate-x-0" : "-translate-x-full"
           )}
         >
           <div className="flex flex-col h-full w-[280px]">

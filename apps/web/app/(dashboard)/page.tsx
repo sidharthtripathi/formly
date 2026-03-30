@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { motion } from "framer-motion";
-import { Sparkles, FileText, MessageSquare, Calendar, Briefcase, BarChart, Target, Bug, Clock, Store, LayoutTemplate } from "lucide-react";
+import { Sparkles, FileText, MessageSquare, Calendar, Briefcase, BarChart, Target, Bug, Clock } from "lucide-react";
 
 const QUICK_TEMPLATES = [
   { name: "Contact Form", icon: MessageSquare, description: "Name, Email, Subject, Message", slug: "contact" },
@@ -30,7 +30,7 @@ export default function DashboardHomePage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-3xl">
+    <div className="mx-auto px-4 pt-8 max-w-3xl">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -98,7 +98,7 @@ export default function DashboardHomePage() {
 
       {/* Quick Templates Grid */}
       <motion.div
-        className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12"
+        className="grid grid-cols-2 md:grid-cols-4 gap-4"
         initial="hidden"
         animate="visible"
         variants={{
@@ -128,27 +128,6 @@ export default function DashboardHomePage() {
             </motion.button>
           );
         })}
-      </motion.div>
-
-      {/* Footer Links */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.4 }}
-        className="flex justify-center gap-6 text-sm"
-      >
-        <Button variant="ghost" asChild>
-          <a href="/marketplace" className="flex items-center gap-2">
-            <Store className="w-4 h-4" />
-            Browse Marketplace
-          </a>
-        </Button>
-        <Button variant="ghost" asChild>
-          <a href="/templates" className="flex items-center gap-2">
-            <LayoutTemplate className="w-4 h-4" />
-            My Templates
-          </a>
-        </Button>
       </motion.div>
     </div>
   );
