@@ -1,6 +1,15 @@
+import { config } from "dotenv";
+import * as path from "path";
+import * as fs from "fs";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "@formly/shared/db/schema.js";
+
+// Load .env from root directory
+const envPath = path.resolve(process.cwd(), "../../.env");
+if (fs.existsSync(envPath)) {
+  config({ path: envPath });
+}
 
 const connectionString = process.env.DATABASE_URL;
 

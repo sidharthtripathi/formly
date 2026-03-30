@@ -1,4 +1,13 @@
-import "dotenv/config";
+import { config } from "dotenv";
+import * as path from "path";
+import { fileURLToPath } from "url";
+
+// Load .env from apps/server directory
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const envPath = path.resolve(__dirname, "../.env");
+config({ path: envPath });
+
 import express from "express";
 import cors from "cors";
 import { rateLimitMiddleware } from "./middleware/rate-limit.js";
