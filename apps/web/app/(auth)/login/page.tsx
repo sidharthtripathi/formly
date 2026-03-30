@@ -7,8 +7,15 @@ import { clientAuth } from "@/lib/client-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { motion } from "framer-motion";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Sparkles } from "lucide-react";
 
 export default function LoginPage() {
@@ -19,12 +26,11 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // Check if already logged in - only redirect if we have an actual user session
     clientAuth
       .getSession()
-      .then((session) => {
-        // Only redirect if session exists AND has a user
-        if (session?.user) {
+      .then((authSession) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if ((authSession as any)?.user) {
           router.push("/");
         }
       })
@@ -57,13 +63,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md p-6"
-      >
+    <div className="min-h-screen flex items-center justify-center relative">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+      <div className="w-full max-w-md p-6">
         <Card>
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
@@ -72,13 +76,11 @@ export default function LoginPage() {
               </div>
             </div>
             <CardTitle className="text-2xl">Welcome back</CardTitle>
-            <CardDescription>
-              Sign in to your Formly account
-            </CardDescription>
+            <CardDescription>Sign in to your Formly account</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleEmailPassword} className="space-y-4">
-              <div className="space-y-2">
+            <form onSubmit={handleEmailPassword} className="grid gap-4">
+              <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
@@ -89,7 +91,7 @@ export default function LoginPage() {
                   required
                 />
               </div>
-              <div className="space-y-2">
+              <div className="grid gap-2">
                 <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
@@ -101,29 +103,30 @@ export default function LoginPage() {
                 />
               </div>
 
-              {error && (
-                <p className="text-sm text-destructive">{error}</p>
-              )}
+              {error && <p className="text-sm text-destructive">{error}</p>}
 
-              <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+              <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Signing in..." : "Sign in with Email"}
               </Button>
             </form>
 
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
+                <Separator className="w-full" />
               </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+              <div className="relative flex justify-center">
+                <span className="bg-card px-2 text-xs text-muted-foreground">
+                  Or continue with
+                </span>
               </div>
             </div>
 
             {/* Google OAuth */}
             <Button
-              onClick={() => clientAuth.signIn.social({ provider: "google", callbackURL: "/" })}
+              onClick={() =>
+                clientAuth.signIn.social({ provider: "google", callbackURL: "/" })
+              }
               className="w-full"
-              size="lg"
               variant="outline"
             >
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
@@ -155,7 +158,7 @@ export default function LoginPage() {
             </p>
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
     </div>
   );
 }
