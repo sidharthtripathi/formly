@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { FieldRenderer } from "@/components/builder/shared/FieldRenderer";
 import { ConditionalWrapper } from "./ConditionalWrapper";
@@ -29,17 +29,23 @@ export function PageRenderer({ schema, formId, isAnonymous }: PageRendererProps)
   const pages = schema.pages.length > 0 ? schema.pages : [{ id: "default", index: 0, title: "" }];
   const totalPages = pages.length;
 
-  const currentPageFields = schema.fields
-    .filter((f) => f.pageIndex === currentPage && f.type !== "page_break" && f.type !== "hidden_field" && f.type !== "section_header" && f.type !== "statement")
-    .sort((a, b) => a.order - b.order);
+  const currentPageFields = useMemo(
+    () =>
+      schema.fields
+        .filter((f) => f.pageIndex === currentPage && f.type !== "page_break" && f.type !== "hidden_field" && f.type !== "section_header" && f.type !== "statement")
+        .sort((a, b) => a.order - b.order),
+    [schema.fields, currentPage]
+  );
 
-  const visibleFields = currentPageFields.filter((f) => {
-    const conditions = f.conditions;
-    if (!conditions || conditions.length === 0) return true;
-    return evaluateConditions(conditions, answers);
-  });
+  const visibleFields = useMemo(() => {
+    return currentPageFields.filter((f) => {
+      const conditions = f.conditions;
+      if (!conditions || conditions.length === 0) return true;
+      return evaluateConditions(conditions, answers);
+    });
+  }, [currentPageFields, answers]);
 
-  const validatePage = (): boolean => {
+  const validatePage = useCallback((): boolean => {
     const newErrors: Record<string, string> = {};
     visibleFields.forEach((field) => {
       const result = validateFieldValue(field.type, answers[field.id], field.required);
@@ -49,7 +55,7 @@ export function PageRenderer({ schema, formId, isAnonymous }: PageRendererProps)
     });
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [visibleFields, answers]);
 
   const handleNext = () => {
     if (validatePage()) {
@@ -85,14 +91,15 @@ export function PageRenderer({ schema, formId, isAnonymous }: PageRendererProps)
 
   const handleFieldChange = useCallback((fieldId: string, value: unknown) => {
     setAnswers((prev) => ({ ...prev, [fieldId]: value }));
-    if (errors[fieldId]) {
-      setErrors((prev) => {
+    setErrors((prev) => {
+      if (prev[fieldId]) {
         const next = { ...prev };
         delete next[fieldId];
         return next;
-      });
-    }
-  }, [errors]);
+      }
+      return prev;
+    });
+  }, []);
 
   if (isComplete) {
     return (

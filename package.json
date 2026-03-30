@@ -10,7 +10,9 @@
     "dev": "turbo dev",
     "build": "turbo build",
     "lint": "turbo lint",
+    "db:push": "turbo run db:push",
     "db:migrate": "turbo db:migrate",
+    "db:studio": "turbo run db:studio",
     "format": "prettier --write \"**/*.{ts,tsx,md}\""
   },
   "devDependencies": {

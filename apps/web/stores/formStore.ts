@@ -103,6 +103,14 @@ export const useFormStore = create<FormStore>()(
     addField: (type, pageIndex) =>
       set((state) => {
         if (!state.schema) return;
+        // Save current state to history
+        if (state.history.length > 0) {
+          state.history = state.history.slice(0, state.historyIndex + 1);
+        }
+        state.history.push(JSON.parse(JSON.stringify(state.schema)));
+        if (state.history.length > 20) state.history.shift();
+        state.historyIndex = state.history.length - 1;
+
         const newField: FormField = {
           id: crypto.randomUUID(),
           type,
@@ -118,6 +126,14 @@ export const useFormStore = create<FormStore>()(
     updateField: (fieldId, patch) =>
       set((state) => {
         if (!state.schema) return;
+        // Save current state to history before mutation
+        if (state.history.length > 0) {
+          state.history = state.history.slice(0, state.historyIndex + 1);
+        }
+        state.history.push(JSON.parse(JSON.stringify(state.schema)));
+        if (state.history.length > 20) state.history.shift();
+        state.historyIndex = state.history.length - 1;
+
         const field = state.schema.fields.find((f) => f.id === fieldId);
         if (field) Object.assign(field, patch);
       }),
@@ -125,6 +141,14 @@ export const useFormStore = create<FormStore>()(
     deleteField: (fieldId) =>
       set((state) => {
         if (!state.schema) return;
+        // Save current state to history
+        if (state.history.length > 0) {
+          state.history = state.history.slice(0, state.historyIndex + 1);
+        }
+        state.history.push(JSON.parse(JSON.stringify(state.schema)));
+        if (state.history.length > 20) state.history.shift();
+        state.historyIndex = state.history.length - 1;
+
         state.schema.fields = state.schema.fields.filter((f) => f.id !== fieldId);
         if (state.selectedFieldId === fieldId) state.selectedFieldId = null;
       }),

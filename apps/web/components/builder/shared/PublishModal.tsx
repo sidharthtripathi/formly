@@ -30,7 +30,8 @@ export function PublishModal({ formId, open, onClose }: PublishModalProps) {
   const [slug, setSlug] = useState(form?.publicSlug || "");
   const [copied, setCopied] = useState(false);
 
-  const publicUrl = slug ? `${typeof window !== "undefined" ? window.location.origin : ""}/f/${slug}` : "";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+  const publicUrl = slug ? `${appUrl}/f/${slug}` : "";
 
   const handlePublish = async () => {
     await publishForm.mutateAsync(formId);
@@ -131,7 +132,7 @@ export function PublishModal({ formId, open, onClose }: PublishModalProps) {
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                  {typeof window !== "undefined" ? window.location.origin : ""}/f/
+                  {appUrl}/f/
                 </span>
                 <Input
                   id="slug"

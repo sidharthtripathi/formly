@@ -4,12 +4,17 @@ import { db } from "../db";
 import { users, subscriptions } from "../db/schema";
 import { eq } from "drizzle-orm";
 
-const stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-12-18.acacia",
-});
+const stripeClient = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2024-12-18.acacia" as const,
+    })
+  : null;
 
 export const stripeRoutes = new Elysia()
   .post("/api/stripe/create-checkout", async ({ store }) => {
+    if (!stripeClient) {
+      return { error: "Stripe not configured" };
+    }
     const user = store.user as { id: string };
     const dbUser = await db.query.users.findFirst({
       where: eq(users.id, user.id),
@@ -32,6 +37,9 @@ export const stripeRoutes = new Elysia()
     return { data: { url: session.url } };
   })
   .post("/api/stripe/portal", async ({ store }) => {
+    if (!stripeClient) {
+      return { error: "Stripe not configured" };
+    }
     const user = store.user as { id: string };
     const dbUser = await db.query.users.findFirst({
       where: eq(users.id, user.id),
@@ -45,6 +53,9 @@ export const stripeRoutes = new Elysia()
     return { data: { url: session.url } };
   })
   .post("/api/stripe/webhook", async ({ request }) => {
+    if (!stripeClient) {
+      return { error: "Stripe not configured" };
+    }
     const sig = request.headers.get("stripe-signature")!;
     const body = await request.text();
 

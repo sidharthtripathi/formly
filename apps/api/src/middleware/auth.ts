@@ -11,12 +11,7 @@ const db = drizzle(sql, { schema });
 export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg", schema }),
   emailAndPassword: { enabled: true },
-  socialProviders: {
-    google: {
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    },
-  },
+  baseURL: process.env.BETTER_AUTH_URL || process.env.API_URL || "http://localhost:3001",
 });
 
 export async function validateSession(token: string) {
@@ -60,11 +55,14 @@ export interface AuthContext {
 }
 
 export const authMiddleware = async (context: ElysiaContext & { store: AuthContext }) => {
-  const url = context.request.url.replace(/^.*:\d+/, "");
+  const request = context.request;
+  if (!request?.url) return;
+
+  const url = request.url.replace(/^.*:\d+/, "");
 
   if (isPublicPath(url)) return;
 
-  const authHeader = context.request.headers.get("authorization");
+  const authHeader = request.headers.get("authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     context.error(401, "Unauthorized");
     return;
