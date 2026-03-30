@@ -8,10 +8,14 @@
     "./types": "./types/form-schema.ts",
     "./types/form-schema": "./types/form-schema.ts",
     "./types/api": "./types/api.ts",
-    "./utils": "./utils/form-validators.ts"
+    "./utils": "./utils/form-validators.ts",
+    "./db": "./db/schema.ts",
+    "./db/*": "./db/*"
   },
   "dependencies": {
-    "zod": "^3.23.0"
+    "zod": "^3.23.0",
+    "drizzle-orm": "^0.38.0",
+    "@paralleldrive/cuid2": "^2.2.0"
   },
   "devDependencies": {
     "typescript": "^5.7.0"

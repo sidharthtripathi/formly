@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { clientAuth } from "@/lib/client-auth";
+import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,16 +26,16 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    clientAuth
-      .getSession()
-      .then((authSession) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if ((authSession as any)?.user) {
+    // Check if already logged in
+    fetch("/api/auth/session")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.user) {
           router.push("/");
         }
       })
       .catch(() => {
-        // Session check failed - user is not logged in, stay on login page
+        // Not logged in, stay on login
       });
   }, [router]);
 
@@ -45,13 +45,14 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const { error: signInError } = await clientAuth.signIn.email({
+      const result = await signIn("credentials", {
         email,
         password,
-        callbackURL: "/",
+        redirect: false,
       });
-      if (signInError) {
-        setError(signInError.message || "Failed to sign in");
+
+      if (result?.error) {
+        setError(result.error || "Failed to sign in");
       } else {
         router.push("/");
       }
@@ -123,9 +124,7 @@ export default function LoginPage() {
 
             {/* Google OAuth */}
             <Button
-              onClick={() =>
-                clientAuth.signIn.social({ provider: "google", callbackURL: "/" })
-              }
+              onClick={() => signIn("google", { callbackUrl: "/" })}
               className="w-full"
               variant="outline"
             >
