@@ -3,7 +3,9 @@
 import { useForm, Controller } from "react-hook-form";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
 import type { FormField, FieldType } from "@formly/shared/types/form-schema";
 import { Star, Heart, Check } from "lucide-react";
 
@@ -50,7 +52,7 @@ export function FieldRenderer({
 
       case "long_text":
         return (
-          <textarea
+          <Textarea
             {...baseProps}
             value={value as string || ""}
             onChange={(e) => onChange?.(e.target.value)}
@@ -117,8 +119,10 @@ export function FieldRenderer({
         return (
           <div className="space-y-2">
             {options?.map((opt) => (
-              <label
+              <motion.label
                 key={opt.id}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
                 className={cn(
                   "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
                   value === opt.value && "border-primary bg-primary/5",
@@ -135,7 +139,7 @@ export function FieldRenderer({
                   className="w-4 h-4"
                 />
                 <span className="text-sm">{opt.label}</span>
-              </label>
+              </motion.label>
             ))}
           </div>
         );
@@ -146,8 +150,10 @@ export function FieldRenderer({
             {options?.map((opt) => {
               const arr = (value as string[]) || [];
               return (
-                <label
+                <motion.label
                   key={opt.id}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
                   className={cn(
                     "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
                     arr.includes(opt.value) && "border-primary bg-primary/5",
@@ -168,7 +174,7 @@ export function FieldRenderer({
                     className="w-4 h-4 rounded"
                   />
                   <span className="text-sm">{opt.label}</span>
-                </label>
+                </motion.label>
               );
             })}
           </div>
@@ -269,9 +275,11 @@ export function FieldRenderer({
         return (
           <div className="flex gap-1">
             {Array.from({ length: max }, (_, i) => i + 1).map((n) => (
-              <button
+              <motion.button
                 key={n}
                 type="button"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
                 onClick={() => onChange?.(n)}
                 disabled={disabled}
                 className={cn(
@@ -281,7 +289,7 @@ export function FieldRenderer({
                 )}
               >
                 <Star className="w-6 h-6 fill-current" />
-              </button>
+              </motion.button>
             ))}
           </div>
         );

@@ -12,6 +12,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
   MoreHorizontal,
@@ -20,114 +23,171 @@ import {
   BarChart2,
   Copy,
   Save,
-  Settings,
   Trash2,
   FileText,
   CheckCircle,
   Circle,
   Clock,
   X,
+  Sparkles,
+  LayoutDashboard,
+  Store,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+
+type FormListItem = {
+  id: string;
+  title: string;
+  status: string;
+  isPublished: boolean;
+  publicSlug?: string | null;
+};
 
 export function Sidebar() {
-  const { data: forms, isLoading } = useForms();
+  const { data: forms, isLoading } = useForms() as { data: FormListItem[] | undefined; isLoading: boolean };
   const deleteForm = useDeleteForm();
   const [open, setOpen] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
     <>
       {/* Toggle Button (mobile) */}
       <button
         onClick={() => setOpen(!open)}
-        className="fixed top-4 left-4 z-50 p-2 bg-background border rounded-md lg:hidden"
+        className="fixed top-4 left-4 z-50 p-2 bg-background border rounded-md shadow-sm lg:hidden"
       >
         {open ? <X className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
       </button>
 
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          "fixed lg:static inset-y-0 left-0 z-40 w-64 bg-background border-r transform transition-transform lg:transform-none",
-          open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-        )}
+      {/* Collapsed toggle (desktop) */}
+      <button
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="hidden lg:flex fixed top-4 left-4 z-40 p-2 bg-background border rounded-md shadow-sm hover:bg-muted transition-colors"
       >
-        <div className="flex flex-col h-full">
-          {/* Header */}
-          <div className="p-4 border-b">
-            <Link
-              href="/"
-              className="flex items-center gap-2 font-bold text-lg"
-            >
-              ✨ New Form
-            </Link>
-          </div>
+        {isCollapsed ? <FileText className="w-4 h-4" /> : <X className="w-4 h-4" />}
+      </button>
 
-          {/* Forms List */}
-          <div className="flex-1 overflow-auto">
-            <div className="p-2">
-              <h3 className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                My Forms
-              </h3>
+      <AnimatePresence>
+        <motion.aside
+          initial={false}
+          animate={{
+            width: isCollapsed ? 0 : 280,
+            opacity: isCollapsed ? 0 : 1,
+          }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
+          className={cn(
+            "fixed lg:static inset-y-0 left-0 z-40 bg-background border-r overflow-hidden",
+            open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          )}
+        >
+          <div className="flex flex-col h-full w-[280px]">
+            {/* Header */}
+            <div className="p-4 border-b">
+              <Link
+                href="/"
+                className="flex items-center gap-2 font-bold text-lg hover:text-primary transition-colors"
+              >
+                <Sparkles className="w-5 h-5" />
+                <span>Formly</span>
+              </Link>
+            </div>
 
-              {isLoading && (
-                <div className="space-y-2 p-3">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="h-16 bg-muted rounded animate-pulse" />
-                  ))}
-                </div>
-              )}
+            {/* New Form Button */}
+            <div className="p-3">
+              <Button asChild className="w-full" size="sm">
+                <Link href="/builder/new">
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Form
+                </Link>
+              </Button>
+            </div>
 
-              {forms?.length === 0 && !isLoading && (
-                <div className="text-center py-8 text-muted-foreground text-sm">
-                  <p>No forms yet</p>
-                  <Link
-                    href="/builder/new"
-                    className="text-primary hover:underline mt-2 inline-block"
+            {/* Forms List */}
+            <div className="flex-1 overflow-auto">
+              <div className="p-2">
+                <h3 className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <LayoutDashboard className="w-3 h-3" />
+                  My Forms
+                </h3>
+
+                {isLoading && (
+                  <div className="space-y-2 p-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="h-14 bg-muted rounded-lg animate-pulse" />
+                    ))}
+                  </div>
+                )}
+
+                {forms?.length === 0 && !isLoading && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center py-8 text-muted-foreground text-sm"
                   >
-                    Create your first form
-                  </Link>
-                </div>
-              )}
+                    <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p>No forms yet</p>
+                    <Link
+                      href="/builder/new"
+                      className="text-primary hover:underline mt-2 inline-block"
+                    >
+                      Create your first form
+                    </Link>
+                  </motion.div>
+                )}
 
-              <div className="space-y-1">
-                {forms?.map((form: { id: string; title: string; status: string; isPublished: boolean; publicSlug?: string }) => (
-                  <FormListItem
-                    key={form.id}
-                    form={form}
-                    onDelete={() => deleteForm.mutate(form.id)}
-                  />
-                ))}
+                <motion.div
+                  className="space-y-1"
+                  initial={false}
+                >
+                  {forms?.map((form, index) => (
+                    <motion.div
+                      key={form.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <FormListItem
+                        form={form}
+                        onDelete={() => deleteForm.mutate(form.id)}
+                      />
+                    </motion.div>
+                  ))}
+                </motion.div>
               </div>
             </div>
-          </div>
 
-          {/* Footer Links */}
-          <div className="p-4 border-t space-y-1">
-            <Link
-              href="/templates"
-              className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors"
-            >
-              <Save className="w-4 h-4" />
-              My Templates
-            </Link>
-            <Link
-              href="/marketplace"
-              className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors"
-            >
-              🏪 Marketplace
-            </Link>
+            {/* Footer Links */}
+            <div className="p-4 border-t space-y-1">
+              <Link
+                href="/templates"
+                className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors"
+              >
+                <Save className="w-4 h-4" />
+                My Templates
+              </Link>
+              <Link
+                href="/marketplace"
+                className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors"
+              >
+                <Store className="w-4 h-4" />
+                Marketplace
+              </Link>
+            </div>
           </div>
-        </div>
-      </aside>
+        </motion.aside>
+      </AnimatePresence>
 
       {/* Overlay (mobile) */}
-      {open && (
-        <div
-          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
-          onClick={() => setOpen(false)}
-        />
-      )}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+            onClick={() => setOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }
@@ -141,7 +201,7 @@ function FormListItem({
     title: string;
     status: string;
     isPublished: boolean;
-    publicSlug?: string;
+    publicSlug?: string | null;
   };
   onDelete: () => void;
 }) {
@@ -173,9 +233,11 @@ function FormListItem({
   };
 
   return (
-    <div
+    <motion.div
+      whileHover={{ scale: 1.01 }}
+      whileTap={{ scale: 0.99 }}
       className={cn(
-        "group flex items-center justify-between p-2 rounded-md hover:bg-muted transition-colors",
+        "group flex items-center justify-between p-2 rounded-md hover:bg-muted transition-colors cursor-pointer",
         open && "bg-muted"
       )}
     >
@@ -248,6 +310,6 @@ function FormListItem({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-    </div>
+    </motion.div>
   );
 }

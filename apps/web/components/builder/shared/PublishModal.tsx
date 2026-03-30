@@ -10,9 +10,11 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { usePublishForm, useForm } from "@/hooks/useForms";
-import { Copy, RefreshCw, Check } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
+import { Copy, RefreshCw, Check, Globe, Lock } from "lucide-react";
 
 interface PublishModalProps {
   formId: string;
@@ -50,15 +52,29 @@ export function PublishModal({ formId, open, onClose }: PublishModalProps) {
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Publish Form</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Globe className="w-4 h-4" />
+            Publish Form
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          className="space-y-6 py-4"
+        >
           {/* Access Control */}
           <div className="space-y-3">
-            <label className="text-sm font-medium">Who can fill this form?</label>
+            <Label>Who can fill this form?</Label>
             <div className="space-y-2">
-              <label className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer">
+              <motion.label
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                  isAnonymous ? "bg-primary/5 border-primary" : ""
+                }`}
+              >
                 <input
                   type="radio"
                   checked={isAnonymous}
@@ -66,11 +82,20 @@ export function PublishModal({ formId, open, onClose }: PublishModalProps) {
                   className="mt-0.5"
                 />
                 <div>
-                  <span className="font-medium text-sm">Anyone (Anonymous)</span>
+                  <span className="font-medium text-sm flex items-center gap-2">
+                    <Globe className="w-3 h-3" />
+                    Anyone (Anonymous)
+                  </span>
                   <p className="text-xs text-muted-foreground">No login required for respondents</p>
                 </div>
-              </label>
-              <label className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer">
+              </motion.label>
+              <motion.label
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                  !isAnonymous ? "bg-primary/5 border-primary" : ""
+                }`}
+              >
                 <input
                   type="radio"
                   checked={!isAnonymous}
@@ -78,37 +103,44 @@ export function PublishModal({ formId, open, onClose }: PublishModalProps) {
                   className="mt-0.5"
                 />
                 <div>
-                  <span className="font-medium text-sm">Authenticated Users Only</span>
+                  <span className="font-medium text-sm flex items-center gap-2">
+                    <Lock className="w-3 h-3" />
+                    Authenticated Users Only
+                  </span>
                   <p className="text-xs text-muted-foreground">Respondents must sign in with Google</p>
                 </div>
-              </label>
+              </motion.label>
             </div>
           </div>
 
           {/* Allow Multiple Submissions */}
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
+          <div className="flex items-center justify-between">
+            <Label htmlFor="allow-multiple" className="cursor-pointer">
+              Allow multiple submissions from the same person
+            </Label>
+            <Switch
               id="allow-multiple"
               checked={allowMultiple}
-              onChange={(e) => setAllowMultiple(e.target.checked)}
-              className="w-4 h-4 rounded"
+              onCheckedChange={(checked) => setAllowMultiple(checked)}
             />
-            <label htmlFor="allow-multiple" className="text-sm font-medium">
-              Allow multiple submissions from the same person
-            </label>
           </div>
 
           {/* Public URL */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Public URL</label>
+            <Label htmlFor="slug">Public URL</Label>
             <div className="flex gap-2">
-              <Input
-                value={slug}
-                onChange={(e) => setSlug(e.target.value)}
-                placeholder="your-form-slug"
-                className="flex-1"
-              />
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                  {typeof window !== "undefined" ? window.location.origin : ""}/f/
+                </span>
+                <Input
+                  id="slug"
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value)}
+                  placeholder="your-form-slug"
+                  className="flex-1 pl-24"
+                />
+              </div>
               <Button variant="outline" size="icon" onClick={handleRegenerateSlug}>
                 <RefreshCw className="w-4 h-4" />
               </Button>
@@ -116,13 +148,8 @@ export function PublishModal({ formId, open, onClose }: PublishModalProps) {
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               </Button>
             </div>
-            {publicUrl && (
-              <p className="text-xs text-muted-foreground">
-                {publicUrl}
-              </p>
-            )}
           </div>
-        </div>
+        </motion.div>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
