@@ -21,11 +21,12 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // Check if already logged in
+    // Check if already logged in - only redirect if we have an actual user session
     clientAuth
       .getSession()
       .then((session) => {
-        if (session) {
+        // Only redirect if session exists AND has a user
+        if (session?.user) {
           router.push("/");
         }
       })
