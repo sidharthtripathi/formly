@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, users } from "@/lib/db";
-import { createId } from "@paralleldrive/cuid2";
+import { db } from "@/lib/db-server";
+import { users } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
@@ -30,11 +30,10 @@ export async function POST(request: NextRequest) {
     // Hash password
     const passwordHash = await bcrypt.hash(password, 12);
 
-    // Create user
+    // Create user (id is auto-generated as UUID by defaultRandom())
     const [newUser] = await db
       .insert(users)
       .values({
-        id: createId(),
         email,
         name: name || null,
         passwordHash,

@@ -3,7 +3,7 @@ import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { createId } from "@paralleldrive/cuid2";
-import { db } from "@/lib/db";
+import { db } from "@/lib/db-server";
 import { users } from "@formly/shared/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";

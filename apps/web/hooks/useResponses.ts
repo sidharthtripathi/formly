@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
-import { auth } from "@/lib/auth";
 import { authedFetch, API_URL } from "@/lib/api-helpers";
 
 export function useResponses(formId: string, page = 1) {
@@ -57,11 +56,8 @@ export function useSubmitResponse() {
 export function useExportResponses() {
   return useMutation({
     mutationFn: async (formId: string) => {
-      const session = await auth();
-      const token = (session?.user as { id?: string })?.id;
-
       const response = await fetch(`${API_URL}/api/forms/${formId}/responses/export`, {
-        headers: token ? { "X-User-Id": token } : {},
+        credentials: "include",
       });
 
       if (!response.ok) {

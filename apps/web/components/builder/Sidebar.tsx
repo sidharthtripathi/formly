@@ -61,7 +61,7 @@ export function Sidebar() {
       {/* Collapsed toggle (desktop) */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="hidden lg:flex fixed top-4 left-4 z-40 p-2 bg-background border rounded-md shadow-sm hover:bg-muted transition-colors"
+        className="hidden lg:flex fixed top-4 left-64 z-40 p-2 bg-background border rounded-md shadow-sm hover:bg-muted transition-colors"
       >
         {isCollapsed ? <FileText className="w-4 h-4" /> : <X className="w-4 h-4" />}
       </button>

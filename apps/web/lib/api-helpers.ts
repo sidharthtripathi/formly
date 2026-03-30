@@ -1,5 +1,3 @@
-import { auth } from "@/lib/auth";
-
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 export interface ApiError {
@@ -11,21 +9,16 @@ export async function authedFetch<T = unknown>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const session = await auth();
-
   const headers: HeadersInit = {
     "Content-Type": "application/json",
     ...options.headers,
   };
 
-  // Include user ID for server-side JWT validation
-  if (session?.user?.id) {
-    headers["X-User-Id"] = session.user.id;
-  }
-
+  // The server will validate the session via the cookie
   const res = await fetch(`${API_URL}${endpoint}`, {
     ...options,
     headers,
+    credentials: "include",
   });
 
   if (!res.ok) {
