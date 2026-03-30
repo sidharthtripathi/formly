@@ -56,12 +56,23 @@ usersRouter.get("/me/credits", async (req: AuthRequest, res) => {
     const now = new Date();
     const resetDate = new Date(dbUser.aiCreditsResetAt);
 
-    // Reset credits if past reset date
+    // Reset credits if past reset date - persist to database
     if (now >= resetDate) {
+      const newResetDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+      await db
+        .update(users)
+        .set({
+          aiCreditsUsed: 0,
+          aiCreditsResetAt: newResetDate,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, user.id));
+
       return res.json({
         used: 0,
         limit: dbUser.plan === "pro" ? -1 : 20,
-        resetsAt: new Date(now.getFullYear(), now.getMonth() + 1, 1),
+        resetsAt: newResetDate,
       });
     }
 

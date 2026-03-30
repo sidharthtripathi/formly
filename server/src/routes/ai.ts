@@ -3,10 +3,12 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const router = Router();
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-  baseURL: process.env.ANTHROPIC_BASE_URL,
-});
+const client = process.env.ANTHROPIC_API_KEY
+  ? new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+      baseURL: process.env.ANTHROPIC_BASE_URL,
+    })
+  : null;
 
 function extractTextDelta(chunk: any): string | null {
   if (chunk.type === "content_block_delta" && chunk.delta?.type === "text_delta") {
@@ -25,6 +27,10 @@ router.get("/generate", async (req, res) => {
 
   if (!prompt) {
     return res.status(400).json({ error: "Prompt is required" });
+  }
+
+  if (!client) {
+    return res.status(500).json({ error: "AI service not configured" });
   }
 
   res.setHeader("Content-Type", "text/event-stream");
@@ -72,6 +78,10 @@ router.post("/modify", async (req, res) => {
 
   if (!prompt) {
     return res.status(400).json({ error: "Prompt is required" });
+  }
+
+  if (!client) {
+    return res.status(500).json({ error: "AI service not configured" });
   }
 
   res.setHeader("Content-Type", "text/event-stream");

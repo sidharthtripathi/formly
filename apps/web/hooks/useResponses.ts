@@ -10,6 +10,7 @@ export function useResponses(formId: string, page = 1) {
       return data;
     },
     enabled: !!formId,
+    retry: false,
   });
 }
 
@@ -26,6 +27,7 @@ export function useInfiniteResponses(formId: string) {
     },
     initialPageParam: 1,
     enabled: !!formId,
+    retry: false,
   });
 }
 
@@ -39,6 +41,10 @@ export function useSubmitResponse() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ answers, metadata, respondentId }),
       });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: "Failed to submit response" }));
+        throw new Error(error.error || `HTTP ${res.status}`);
+      }
       const data = await res.json();
       return data;
     },
@@ -52,12 +58,16 @@ export function useExportResponses() {
   return useMutation({
     mutationFn: async (formId: string) => {
       const session = await auth();
-      const token = session?.accessToken;
+      const token = (session?.user as { id?: string })?.id;
+
       const response = await fetch(`${API_URL}/api/forms/${formId}/responses/export`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: token ? { "X-User-Id": token } : {},
       });
+
+      if (!response.ok) {
+        throw new Error("Failed to export responses");
+      }
+
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");

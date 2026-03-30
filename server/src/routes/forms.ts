@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, forms } from "../db/index.js";
 import { eq, desc } from "drizzle-orm";
+import { randomUUID } from "crypto";
 import { AuthRequest } from "../middleware/auth.js";
 
 export const formsRouter = Router();
@@ -163,7 +164,7 @@ formsRouter.post("/:id/publish", async (req: AuthRequest, res) => {
       return res.status(403).json({ error: "Forbidden" });
     }
 
-    const slug = `${req.params.id.slice(0, 8)}-${Math.random().toString(36).slice(2, 6)}`;
+    const slug = `${req.params.id.slice(0, 8)}-${randomUUID().split('-')[0]}`;
 
     const [published] = await db
       .update(forms)
@@ -184,7 +185,7 @@ formsRouter.post("/:id/publish", async (req: AuthRequest, res) => {
 });
 
 // GET /api/forms/public/:slug - Get public form by slug (public, no auth)
-formsRouter.get("/public/:slug", async (req, res) => {
+formsRouter.get("/:slug", async (req, res) => {
   try {
     const form = await db.query.forms.findFirst({
       where: eq(forms.publicSlug, req.params.slug),

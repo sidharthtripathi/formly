@@ -9,9 +9,13 @@ export function useMarketplace(params?: { category?: string; sort?: string; q?: 
       // Marketplace list is public
       const queryString = new URLSearchParams(params as Record<string, string>).toString();
       const res = await fetch(`${API_URL}/api/marketplace${queryString ? `?${queryString}` : ""}`);
+      if (!res.ok) {
+        throw new Error("Failed to fetch marketplace");
+      }
       const data = await res.json();
       return data.data;
     },
+    retry: false,
   });
 }
 

@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { db, users } from "../db/index.js";
+import { eq } from "drizzle-orm";
 
 export interface AuthUser {
   id: string;
@@ -31,11 +33,11 @@ function isPublicPath(pathname: string): boolean {
   });
 }
 
-export function authMiddleware(
+export async function authMiddleware(
   req: AuthRequest,
   res: Response,
   next: NextFunction
-): void {
+): Promise<void> {
   const pathname = req.path;
 
   // Skip auth for public paths
@@ -44,6 +46,30 @@ export function authMiddleware(
     return;
   }
 
+  // Check for X-User-Id header (set by frontend authedFetch)
+  const userId = req.headers["x-user-id"] as string | undefined;
+  if (userId) {
+    try {
+      const dbUser = await db.query.users.findFirst({
+        where: eq(users.id, userId),
+      });
+
+      if (dbUser) {
+        req.user = {
+          id: dbUser.id,
+          email: dbUser.email,
+          name: dbUser.name,
+          avatarUrl: dbUser.avatarUrl,
+        };
+        next();
+        return;
+      }
+    } catch (error) {
+      console.error("Auth DB error:", error);
+    }
+  }
+
+  // Fallback to Bearer token validation
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith("Bearer ")) {
     res.status(401).json({ error: "Unauthorized: No token provided" });

@@ -12,15 +12,15 @@ export async function authedFetch<T = unknown>(
   options: RequestInit = {}
 ): Promise<T> {
   const session = await auth();
-  const token = session?.accessToken;
 
   const headers: HeadersInit = {
     "Content-Type": "application/json",
     ...options.headers,
   };
 
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+  // Include user ID for server-side JWT validation
+  if (session?.user?.id) {
+    headers["X-User-Id"] = session.user.id;
   }
 
   const res = await fetch(`${API_URL}${endpoint}`, {

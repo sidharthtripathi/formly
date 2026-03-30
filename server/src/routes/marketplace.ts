@@ -130,7 +130,7 @@ marketplaceRouter.post("/:id/upvote", async (req: AuthRequest, res) => {
     });
 
     if (existing) {
-      // Remove upvote
+      // Remove upvote and decrement count
       await db
         .delete(marketplaceUpvotes)
         .where(
@@ -139,14 +139,25 @@ marketplaceRouter.post("/:id/upvote", async (req: AuthRequest, res) => {
             eq(marketplaceUpvotes.listingId, req.params.id)
           )
         );
+
+      await db
+        .update(marketplaceListings)
+        .set({ upvoteCount: Math.max(0, listing.upvoteCount - 1) })
+        .where(eq(marketplaceListings.id, req.params.id));
+
       return res.json({ upvoted: false });
     }
 
-    // Add upvote
+    // Add upvote and increment count
     await db.insert(marketplaceUpvotes).values({
       userId: user.id,
       listingId: req.params.id,
     });
+
+    await db
+      .update(marketplaceListings)
+      .set({ upvoteCount: listing.upvoteCount + 1 })
+      .where(eq(marketplaceListings.id, req.params.id));
 
     return res.json({ upvoted: true });
   } catch (error) {

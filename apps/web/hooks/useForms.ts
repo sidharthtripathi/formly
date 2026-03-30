@@ -28,6 +28,9 @@ export function usePublicForm(slug: string) {
     queryKey: ["forms", "public", slug],
     queryFn: async () => {
       const res = await fetch(`${API_URL}/api/forms/public/${slug}`);
+      if (!res.ok) {
+        throw new Error("Form not found");
+      }
       const data = await res.json();
       return data.data;
     },

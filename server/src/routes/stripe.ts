@@ -19,6 +19,10 @@ router.post("/create-checkout", async (req: AuthRequest, res: Response) => {
       return res.status(500).json({ error: "Stripe not configured" });
     }
 
+    if (!process.env.STRIPE_PRO_PRICE_ID) {
+      return res.status(500).json({ error: "Stripe price ID not configured" });
+    }
+
     const user = req.user;
     if (!user) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -38,7 +42,7 @@ router.post("/create-checkout", async (req: AuthRequest, res: Response) => {
       payment_method_types: ["card"],
       line_items: [
         {
-          price: process.env.STRIPE_PRO_PRICE_ID!,
+          price: process.env.STRIPE_PRO_PRICE_ID,
           quantity: 1,
         },
       ],
@@ -86,10 +90,14 @@ router.post("/portal", async (req: AuthRequest, res: Response) => {
 });
 
 // POST /webhooks/stripe - Handle Stripe webhooks (raw body, no auth)
-router.post("/webhooks/stripe", async (req: Request, res: Response) => {
+router.post("/", async (req: Request, res: Response) => {
   try {
     if (!stripeClient) {
       return res.status(500).json({ error: "Stripe not configured" });
+    }
+
+    if (!process.env.STRIPE_WEBHOOK_SECRET) {
+      return res.status(500).json({ error: "Stripe webhook secret not configured" });
     }
 
     const sig = req.headers["stripe-signature"] as string;
@@ -100,7 +108,7 @@ router.post("/webhooks/stripe", async (req: Request, res: Response) => {
       event = stripeClient.webhooks.constructEvent(
         body,
         sig,
-        process.env.STRIPE_WEBHOOK_SECRET!
+        process.env.STRIPE_WEBHOOK_SECRET
       );
     } catch (err) {
       console.error("Webhook signature verification failed:", err);
@@ -133,17 +141,48 @@ router.post("/webhooks/stripe", async (req: Request, res: Response) => {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         if (session.mode === "subscription" && session.subscription) {
-          // Find user by stripeCustomerId and create subscription record
           const customerId = session.customer as string;
           const subscription = await stripeClient.subscriptions.retrieve(session.subscription as string);
 
-          await db.insert(subscriptions).values({
-            userId: db.query.users.findFirst({ where: eq(users.stripeCustomerId, customerId) })?.id || "",
-            stripeSubscriptionId: subscription.id,
-            stripePriceId: subscription.items.data[0].price.id,
-            status: subscription.status as "active" | "canceled" | "past_due",
-            currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+          const user = await db.query.users.findFirst({
+            where: eq(users.stripeCustomerId, customerId)
           });
+
+          if (!user) {
+            console.error("Webhook: User not found for customer:", customerId);
+            break;
+          }
+
+          // Upsert subscription - update if exists, insert if not
+          const existingSub = await db.query.subscriptions.findFirst({
+            where: eq(subscriptions.stripeSubscriptionId, subscription.id)
+          });
+
+          if (existingSub) {
+            await db
+              .update(subscriptions)
+              .set({
+                status: subscription.status as "active" | "canceled" | "past_due",
+                stripePriceId: subscription.items.data[0].price.id,
+                currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+                updatedAt: new Date(),
+              })
+              .where(eq(subscriptions.id, existingSub.id));
+          } else {
+            await db.insert(subscriptions).values({
+              userId: user.id,
+              stripeSubscriptionId: subscription.id,
+              stripePriceId: subscription.items.data[0].price.id,
+              status: subscription.status as "active" | "canceled" | "past_due",
+              currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+            });
+          }
+
+          // Update user to pro plan
+          await db
+            .update(users)
+            .set({ plan: "pro", updatedAt: new Date() })
+            .where(eq(users.id, user.id));
         }
         break;
       }
