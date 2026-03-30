@@ -91,7 +91,7 @@ export function Sidebar() {
               )}
 
               <div className="space-y-1">
-                {forms?.map((form) => (
+                {forms?.map((form: { id: string; title: string; status: string; isPublished: boolean; publicSlug?: string }) => (
                   <FormListItem
                     key={form.id}
                     form={form}

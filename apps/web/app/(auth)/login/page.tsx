@@ -1,6 +1,6 @@
 "use client";
 
-import { signIn } from "next-auth/react";
+import { clientAuth } from "@/lib/client-auth";
 import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
@@ -15,7 +15,7 @@ export default function LoginPage() {
           </p>
         </div>
         <Button
-          onClick={() => signIn("google", { callbackUrl: "/" })}
+          onClick={() => clientAuth.signIn.social({ provider: "google", callbackURL: "/" })}
           className="w-full"
           size="lg"
         >

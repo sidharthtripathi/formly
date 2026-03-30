@@ -34,7 +34,8 @@ export function PaymentField(props: PaymentFieldProps) {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const { label, helpText, required, validation, error } = props;
+  const { label, helpText, required, validation } = props.field;
+  const { error, disabled } = props;
   const amount = validation?.amount || 500; // $5.00 default
   const currency = validation?.currency || "usd";
 

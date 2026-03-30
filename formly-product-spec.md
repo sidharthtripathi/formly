@@ -1186,9 +1186,10 @@ POST   /api/webhooks/:id/test        # Send test webhook delivery
 import Anthropic from '@anthropic-ai/sdk';
 
 const client = new Anthropic({
-  apiKey: process.env.MINIMAX_API_KEY,
-  baseURL: process.env.MINIMAX_BASE_URL,  // MiniMax-compatible endpoint
+  apiKey: process.env.ANTHROPIC_API_KEY,
+  baseURL: process.env.ANTHROPIC_BASE_URL, // https://api.minimax.io/anthropic
 });
+// Model: "MiniMax-M2.7" (exact casing per MiniMax docs)
 ```
 
 ### System Prompts
@@ -1610,8 +1611,11 @@ GOOGLE_CLIENT_SECRET=               # Google OAuth client secret
 DATABASE_URL=postgresql://formly:password@localhost:5432/formly
 
 # AI — MiniMax M2.7 via Anthropic SDK
-MINIMAX_API_KEY=                   # MiniMax API key
-MINIMAX_BASE_URL=https://api.minimax.chat  # MiniMax Anthropic-compatible endpoint
+# Get from https://platform.minimax.io/subscribe/token-plan
+# API key is exclusive to Token Plan — not interchangeable with pay-as-you-go keys
+ANTHROPIC_API_KEY=
+# Use this exact endpoint for Anthropic SDK compatibility
+ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic
 
 # Stripe
 STRIPE_SECRET_KEY=                 # Stripe secret key
@@ -1636,8 +1640,8 @@ RESEND_API_KEY=
 | `GOOGLE_CLIENT_ID` | **Yes** | — |
 | `GOOGLE_CLIENT_SECRET` | **Yes** | — |
 | `DATABASE_URL` | Yes | ✅ Default: localhost Docker postgres |
-| `MINIMAX_API_KEY` | **Yes** | — |
-| `MINIMAX_BASE_URL` | **Yes** | ✅ Default: `https://api.minimax.chat` |
+| `ANTHROPIC_API_KEY` | **Yes** | — |
+| `ANTHROPIC_BASE_URL` | **Yes** | ✅ Default: `https://api.minimax.io/anthropic` |
 | `STRIPE_*` | No (payments) | — |
 | `RESEND_API_KEY` | No (email) | — |
 | `AWS_*` (S3) | Only if `STORAGE_MODE=s3` | — |

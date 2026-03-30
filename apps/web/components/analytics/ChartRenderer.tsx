@@ -10,7 +10,6 @@ import {
   Line,
   ScatterChart,
   Scatter,
-  Histogram,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -20,7 +19,7 @@ import {
 } from "recharts";
 import { cn } from "@/lib/utils";
 
-interface ChartSpec {
+export interface ChartSpec {
   type: "pie" | "bar" | "line" | "scatter" | "histogram";
   title: string;
   data: { label: string; value: number }[];

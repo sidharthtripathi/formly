@@ -187,14 +187,14 @@ export default function ResponsesPage() {
                 Submitted {new Date(selectedResponse.submittedAt as string).toLocaleString()}
               </div>
               {schemaFields.map((field: any) => {
-                const answer = selectedResponse.answers?.[field.id];
+                const answer = (selectedResponse.answers as Record<string, unknown>)?.[field.id];
                 return (
                   <div key={field.id} className="space-y-1">
                     <label className="text-sm font-medium text-muted-foreground">
                       {field.label}
                     </label>
                     <div className="text-sm">
-                      {Array.isArray(answer) ? answer.join(", ") : answer ?? "-"}
+                      {Array.isArray(answer) ? (answer as unknown[]).join(", ") : (answer as string) ?? "-"}
                     </div>
                   </div>
                 );

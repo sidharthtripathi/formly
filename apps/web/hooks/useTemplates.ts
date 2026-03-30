@@ -1,13 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api-client";
 import type { FormSchema } from "@formly/shared/types/form-schema";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 export function useTemplates() {
   return useQuery({
     queryKey: ["templates"],
     queryFn: async () => {
-      const { data } = await api.api.templates.get();
-      return data;
+      const res = await fetch(`${API_URL}/api/templates`);
+      const data = await res.json();
+      return data.data;
     },
   });
 }
@@ -16,8 +18,13 @@ export function useCreateTemplate() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: { title: string; description?: string; schema: FormSchema; isPublic?: boolean }) => {
-      const { data } = await api.api.templates.post(payload);
-      return data;
+      const res = await fetch(`${API_URL}/api/templates`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      return data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["templates"] });
@@ -29,7 +36,7 @@ export function useDeleteTemplate() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (templateId: string) => {
-      await api.api.templates({ id: templateId }).delete();
+      await fetch(`${API_URL}/api/templates/${templateId}`, { method: "DELETE" });
       return { success: true };
     },
     onSuccess: () => {
@@ -42,8 +49,9 @@ export function useUseTemplate() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (templateId: string) => {
-      const { data } = await api.api.templates({ id: templateId }).use.post({});
-      return data;
+      const res = await fetch(`${API_URL}/api/templates/${templateId}/use`, { method: "POST" });
+      const data = await res.json();
+      return data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["templates"] });

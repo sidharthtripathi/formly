@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
 import { db } from "../db";
-import { webhooks, forms } from "../db/schema";
+import { webhooks, forms } from "../db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 

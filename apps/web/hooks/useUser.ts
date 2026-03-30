@@ -1,12 +1,14 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { api } from "@/lib/api-client";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 export function useUser() {
   return useQuery({
     queryKey: ["user", "me"],
     queryFn: async () => {
-      const { data } = await api.api.users.me.get();
-      return data;
+      const res = await fetch(`${API_URL}/api/users/me`);
+      const data = await res.json();
+      return data.data;
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -16,8 +18,9 @@ export function useCreditStatus() {
   return useQuery({
     queryKey: ["user", "credits"],
     queryFn: async () => {
-      const { data } = await api.api.users.me.credits.get();
-      return data;
+      const res = await fetch(`${API_URL}/api/users/me/credits`);
+      const data = await res.json();
+      return data.data;
     },
     staleTime: 60 * 1000,
   });
@@ -26,8 +29,9 @@ export function useCreditStatus() {
 export function useCreateStripeCheckout() {
   return useMutation({
     mutationFn: async () => {
-      const { data } = await api.api.stripe["create-checkout"].post({});
-      return data;
+      const res = await fetch(`${API_URL}/api/stripe/create-checkout`, { method: "POST" });
+      const data = await res.json();
+      return data.data;
     },
   });
 }
@@ -35,8 +39,9 @@ export function useCreateStripeCheckout() {
 export function useStripePortal() {
   return useMutation({
     mutationFn: async () => {
-      const { data } = await api.api.stripe.portal.post({});
-      return data;
+      const res = await fetch(`${API_URL}/api/stripe/portal`, { method: "POST" });
+      const data = await res.json();
+      return data.data;
     },
   });
 }

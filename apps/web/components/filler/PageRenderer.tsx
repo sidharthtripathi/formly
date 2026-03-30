@@ -8,7 +8,7 @@ import { ProgressBar } from "./ProgressBar";
 import { Button } from "@/components/ui/button";
 import type { FormSchema, FormField } from "@formly/shared/types/form-schema";
 import { useSubmitResponse } from "@/hooks/useResponses";
-import { validateFieldValue } from "@formly/shared/utils/form-validators";
+import { validateFieldValue } from "@formly/shared/utils";
 import { ChevronLeft, ChevronRight, Check } from "lucide-react";
 
 interface PageRendererProps {

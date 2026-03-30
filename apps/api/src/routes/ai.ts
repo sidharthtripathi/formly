@@ -1,18 +1,27 @@
 import { Elysia } from "elysia";
 import Anthropic from "@anthropic-ai/sdk";
-import { db } from "../db";
-import { users } from "../db/schema";
-import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 const client = new Anthropic({
-  apiKey: process.env.MINIMAX_API_KEY!,
-  baseURL: process.env.MINIMAX_BASE_URL,
+  apiKey: process.env.ANTHROPIC_API_KEY!,
+  baseURL: process.env.ANTHROPIC_BASE_URL!,
 });
 
 const generateSchema = z.object({
   prompt: z.string(),
 });
+
+function extractTextDelta(chunk: any): string | null {
+  // Handle content_block_delta events from Anthropic SDK
+  if (chunk.type === "content_block_delta" && chunk.delta?.type === "text_delta") {
+    return chunk.delta.text;
+  }
+  // Fallback: try direct text field
+  if (typeof chunk.text === "string") {
+    return chunk.text;
+  }
+  return null;
+}
 
 export const ai = new Elysia()
   .post("/api/ai/generate", async ({ body, set }) => {
@@ -20,7 +29,7 @@ export const ai = new Elysia()
     set.headers["Cache-Control"] = "no-cache";
 
     const stream = await client.messages.stream({
-      model: "minimax-m2.7",
+      model: "MiniMax-M2.7",
       max_tokens: 4096,
       system: `You are Formly's AI form designer. Your job is to generate a FormSchema JSON object based on the user's description.
 Rules:
@@ -39,7 +48,10 @@ Rules:
       new ReadableStream({
         async start(controller) {
           for await (const chunk of stream) {
-            controller.enqueue(`data: ${JSON.stringify(chunk)}\n\n`);
+            const text = extractTextDelta(chunk);
+            if (text) {
+              controller.enqueue(`event: schema_delta\ndata: ${JSON.stringify({ text })}\n\n`);
+            }
           }
           controller.enqueue("event: done\ndata: {}\n\n");
           controller.close();
@@ -55,7 +67,7 @@ Rules:
     const { prompt, currentSchema, selectedFieldId } = body;
 
     const stream = await client.messages.stream({
-      model: "minimax-m2.7",
+      model: "MiniMax-M2.7",
       max_tokens: 4096,
       system: `You are Formly's AI form editor. The user wants to modify an existing form.
 Rules:
@@ -75,7 +87,10 @@ Rules:
       new ReadableStream({
         async start(controller) {
           for await (const chunk of stream) {
-            controller.enqueue(`data: ${JSON.stringify(chunk)}\n\n`);
+            const text = extractTextDelta(chunk);
+            if (text) {
+              controller.enqueue(`event: schema_delta\ndata: ${JSON.stringify({ text })}\n\n`);
+            }
           }
           controller.enqueue("event: done\ndata: {}\n\n");
           controller.close();

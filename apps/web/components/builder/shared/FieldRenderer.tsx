@@ -389,8 +389,8 @@ export function FieldRenderer({
             type="date"
             value={value as string || ""}
             onChange={(e) => onChange?.(e.target.value)}
-            min={validation?.min as string}
-            max={validation?.max as string}
+            min={validation?.min ? new Date(validation.min).toISOString().split("T")[0] : undefined}
+            max={validation?.max ? new Date(validation.max).toISOString().split("T")[0] : undefined}
           />
         );
 
@@ -556,29 +556,30 @@ export function FieldRenderer({
           </div>
         );
 
-      case "slider":
-        const min = field.sliderMin ?? 0;
-        const max = field.sliderMax ?? 100;
-        const step = field.sliderStep ?? 1;
+      case "slider": {
+        const sliderMin = field.sliderMin ?? 0;
+        const sliderMax = field.sliderMax ?? 100;
+        const sliderStep = field.sliderStep ?? 1;
         return (
           <div className="space-y-2">
             <input
               type="range"
-              min={min}
-              max={max}
-              step={step}
-              value={value as number ?? min}
+              min={sliderMin}
+              max={sliderMax}
+              step={sliderStep}
+              value={value as number ?? sliderMin}
               onChange={(e) => onChange?.(Number(e.target.value))}
               disabled={disabled}
               className="w-full"
             />
             <div className="flex justify-between text-xs text-muted-foreground">
-              <span>{min}</span>
-              <span className="font-medium">{value ?? min}</span>
-              <span>{max}</span>
+              <span>{sliderMin}</span>
+              <span className="font-medium">{(value as number) ?? sliderMin}</span>
+              <span>{sliderMax}</span>
             </div>
           </div>
         );
+      }
 
       case "address":
         const addrVal = (value as Record<string, string>) || {};

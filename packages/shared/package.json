@@ -6,6 +6,7 @@
   "types": "./types/form-schema.ts",
   "exports": {
     "./types": "./types/form-schema.ts",
+    "./types/form-schema": "./types/form-schema.ts",
     "./types/api": "./types/api.ts",
     "./utils": "./utils/form-validators.ts"
   },
