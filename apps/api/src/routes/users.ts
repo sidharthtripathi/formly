@@ -9,7 +9,18 @@ export const users = new Elysia()
     const dbUser = await db.query.users.findFirst({
       where: eq(users.id, user.id),
     });
-    return { data: dbUser };
+    if (!dbUser) return { data: null };
+    // Only return safe, non-sensitive fields
+    return {
+      data: {
+        id: dbUser.id,
+        email: dbUser.email,
+        name: dbUser.name,
+        image: dbUser.image,
+        plan: dbUser.plan,
+        createdAt: dbUser.createdAt,
+      },
+    };
   })
   .get("/api/users/me/credits", async ({ store }) => {
     const user = store.user as { id: string };

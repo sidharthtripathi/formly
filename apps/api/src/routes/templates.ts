@@ -25,7 +25,13 @@ export const templates = new Elysia()
       .returning();
     return { data: template };
   })
-  .delete("/api/templates/:id", async ({ params }) => {
+  .delete("/api/templates/:id", async ({ params, store, error }) => {
+    const user = store.user as { id: string };
+    const existing = await db.query.templates.findFirst({
+      where: eq(templates.id, params.id),
+    });
+    if (!existing) return error(404, "Template not found");
+    if (existing.ownerId !== user.id) return error(403, "Forbidden");
     await db.delete(templates).where(eq(templates.id, params.id));
     return { success: true };
   })

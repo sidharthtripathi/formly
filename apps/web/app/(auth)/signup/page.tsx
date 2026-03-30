@@ -22,11 +22,16 @@ export default function SignupPage() {
 
   useEffect(() => {
     // Check if already logged in
-    clientAuth.getSession().then((session) => {
-      if (session) {
-        router.push("/");
-      }
-    });
+    clientAuth
+      .getSession()
+      .then((session) => {
+        if (session) {
+          router.push("/");
+        }
+      })
+      .catch(() => {
+        // Session check failed - user is not logged in, stay on signup page
+      });
   }, [router]);
 
   const handleSignup = async (e: React.FormEvent) => {

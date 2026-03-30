@@ -43,15 +43,25 @@ export const marketplace = new Elysia()
 
     return { data: listing };
   })
-  .delete("/api/marketplace/:id", async ({ params, store }) => {
+  .delete("/api/marketplace/:id", async ({ params, store, error }) => {
     const user = store.user as { id: string };
+    const listing = await db.query.marketplaceListings.findFirst({
+      where: eq(marketplaceListings.id, params.id),
+    });
+    if (!listing) return error(404, "Listing not found");
+    if (listing.publisherId !== user.id) return error(403, "Forbidden");
     await db
       .delete(marketplaceListings)
       .where(eq(marketplaceListings.id, params.id));
     return { success: true };
   })
-  .post("/api/marketplace/:id/upvote", async ({ params, store }) => {
+  .post("/api/marketplace/:id/upvote", async ({ params, store, error }) => {
     const user = store.user as { id: string };
+
+    const listing = await db.query.marketplaceListings.findFirst({
+      where: eq(marketplaceListings.id, params.id),
+    });
+    if (!listing) return error(404, "Listing not found");
 
     const existing = await db.query.marketplaceUpvotes.findFirst({
       where: (u, { and }) =>

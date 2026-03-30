@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 // Serves local uploads at /uploads/* — only active when STORAGE_MODE=local
 export const staticUploads = new Elysia().get(
@@ -11,11 +11,19 @@ export const staticUploads = new Elysia().get(
     }
 
     const uploadDir = process.env.UPLOAD_DIR || "/app/uploads";
-    const filePath = join(uploadDir, params.filename);
+
+    // Sanitize filename to prevent path traversal
+    const safeName = params.filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const filePath = resolve(join(uploadDir, safeName));
+
+    // Ensure the resolved path is still within uploadDir
+    if (!filePath.startsWith(resolve(uploadDir))) {
+      return error(403, "Forbidden");
+    }
 
     try {
       const file = await readFile(filePath);
-      const ext = params.filename.split(".").pop()?.toLowerCase();
+      const ext = safeName.split(".").pop()?.toLowerCase();
 
       const mimeTypes: Record<string, string> = {
         pdf: "application/pdf",

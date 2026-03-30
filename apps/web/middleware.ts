@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_PATHS = ["/f/", "/login", "/signup"];
+const PUBLIC_PATHS = ["/f/"];
 
 // Routes that should redirect to home if already logged in
 const AUTH_PATHS = ["/login", "/signup"];
@@ -11,8 +11,10 @@ export async function middleware(request: NextRequest) {
   // Check for better-auth session cookie
   const sessionCookie = request.cookies.get("better-auth.session_token");
 
-  // Public paths check
-  const isPublic = PUBLIC_PATHS.some((path) => pathname.startsWith(path));
+  // Public paths check - must match exactly or be a prefix
+  const isPublic =
+    PUBLIC_PATHS.some((path) => pathname.startsWith(path)) ||
+    AUTH_PATHS.some((path) => pathname === path);
 
   if (isPublic) {
     // If already logged in and trying to access login/signup, redirect to /

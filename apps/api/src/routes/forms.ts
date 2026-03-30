@@ -26,25 +26,54 @@ export const forms = new Elysia()
     });
     return { data: userForms };
   })
-  .get("/api/forms/:id", async ({ params }) => {
+  .get("/api/forms/:id", async ({ params, store, error }) => {
+    const user = store.user as { id: string };
     const form = await db.query.forms.findFirst({
       where: eq(forms.id, params.id),
     });
+    if (!form) return { data: null };
+    if (form.ownerId !== user.id) return error(403, "Forbidden");
     return { data: form };
   })
-  .patch("/api/forms/:id", async ({ params, body }) => {
+  .patch("/api/forms/:id", async ({ params, body, store, error }) => {
+    const user = store.user as { id: string };
+    const existing = await db.query.forms.findFirst({
+      where: eq(forms.id, params.id),
+    });
+    if (!existing) return error(404, "Form not found");
+    if (existing.ownerId !== user.id) return error(403, "Forbidden");
+
+    // Only allow updating specific fields (prevent mass assignment)
     const [updated] = await db
       .update(forms)
-      .set({ ...body, updatedAt: new Date() })
+      .set({
+        title: body.title,
+        description: body.description,
+        schema: body.schema,
+        updatedAt: new Date(),
+      })
       .where(eq(forms.id, params.id))
       .returning();
     return { data: updated };
   })
-  .delete("/api/forms/:id", async ({ params }) => {
+  .delete("/api/forms/:id", async ({ params, store, error }) => {
+    const user = store.user as { id: string };
+    const existing = await db.query.forms.findFirst({
+      where: eq(forms.id, params.id),
+    });
+    if (!existing) return error(404, "Form not found");
+    if (existing.ownerId !== user.id) return error(403, "Forbidden");
     await db.delete(forms).where(eq(forms.id, params.id));
     return { success: true };
   })
-  .post("/api/forms/:id/publish", async ({ params }) => {
+  .post("/api/forms/:id/publish", async ({ params, store, error }) => {
+    const user = store.user as { id: string };
+    const existing = await db.query.forms.findFirst({
+      where: eq(forms.id, params.id),
+    });
+    if (!existing) return error(404, "Form not found");
+    if (existing.ownerId !== user.id) return error(403, "Forbidden");
+
     const slug = `${params.id.slice(0, 8)}-${Math.random().toString(36).slice(2, 6)}`;
     const [published] = await db
       .update(forms)

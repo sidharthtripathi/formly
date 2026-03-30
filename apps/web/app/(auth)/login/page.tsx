@@ -20,11 +20,16 @@ export default function LoginPage() {
 
   useEffect(() => {
     // Check if already logged in
-    clientAuth.getSession().then((session) => {
-      if (session) {
-        router.push("/");
-      }
-    });
+    clientAuth
+      .getSession()
+      .then((session) => {
+        if (session) {
+          router.push("/");
+        }
+      })
+      .catch(() => {
+        // Session check failed - user is not logged in, stay on login page
+      });
   }, [router]);
 
   const handleEmailPassword = async (e: React.FormEvent) => {
