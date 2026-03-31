@@ -7,10 +7,15 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useForm } from "@/hooks/useForms";
 
+interface FormData {
+  title?: string;
+  [key: string]: unknown;
+}
+
 export default function AnalyticsPage() {
   const params = useParams();
   const formId = params.formId as string;
-  const { data: form } = useForm(formId);
+  const { data: form } = useForm(formId) as { data?: FormData };
 
   return (
     <motion.div

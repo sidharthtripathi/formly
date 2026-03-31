@@ -1,4 +1,5 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+// Use the Next.js proxy API route for authenticated requests
+const PROXY_URL = "/api/proxy";
 
 export interface ApiError {
   error: string;
@@ -9,15 +10,11 @@ export async function authedFetch<T = unknown>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-    ...options.headers,
-  };
+  // Strip /api prefix if present, as proxy uses the path directly
+  const path = endpoint.startsWith("/api/") ? endpoint.slice(4) : endpoint;
 
-  // The server will validate the session via the cookie
-  const res = await fetch(`${API_URL}${endpoint}`, {
+  const res = await fetch(`${PROXY_URL}/${path}`, {
     ...options,
-    headers,
     credentials: "include",
   });
 
@@ -29,4 +26,4 @@ export async function authedFetch<T = unknown>(
   return res.json();
 }
 
-export { API_URL };
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";

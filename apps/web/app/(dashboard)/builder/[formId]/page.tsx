@@ -1,10 +1,11 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState, useRef } from "react";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { BuilderShell } from "@/components/builder/BuilderShell";
 import { useFormStore } from "@/stores/formStore";
-import { useForm } from "@/hooks/useForms";
+import { useForm, useCreateForm } from "@/hooks/useForms";
+import { useFormGeneration } from "@/hooks/useAI";
 import type { FormSchema } from "@formly/shared/types/form-schema";
 
 function createEmptySchema(): FormSchema {
@@ -23,35 +24,135 @@ function createEmptySchema(): FormSchema {
   };
 }
 
+// Separate component to handle AI generation with correct formId
+function AIGenerationHandler({
+  formId,
+  prompt,
+  onGenerated
+}: {
+  formId: string;
+  prompt: string | null;
+  onGenerated?: () => void;
+}) {
+  const { schema } = useFormStore();
+  const { generate, isGenerating } = useFormGeneration(formId);
+  const hasGenerated = useRef(false);
+
+  useEffect(() => {
+    // Only generate once, when we have a real formId, a prompt, empty schema, and not already generating
+    if (!formId || formId === "new" || !prompt || (schema?.fields?.length ?? 0) > 0 || isGenerating || hasGenerated.current) {
+      return;
+    }
+
+    hasGenerated.current = true;
+    generate(prompt);
+  }, [formId, prompt, schema, isGenerating, generate]);
+
+  // Call onGenerated callback when generation is complete
+  useEffect(() => {
+    if ((schema?.fields?.length ?? 0) > 0 && onGenerated) {
+      onGenerated();
+    }
+  }, [schema, onGenerated]);
+
+  return null;
+}
+
 function BuilderContent() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const formId = params.formId as string;
   const prompt = searchParams.get("prompt");
+  const template = searchParams.get("template");
+
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [initializedFormId, setInitializedFormId] = useState<string | null>(null);
+  const [showBuilder, setShowBuilder] = useState(false);
 
   const { data: form, isLoading } = useForm(formId);
   const { setSchema, schema } = useFormStore();
+  const createForm = useCreateForm();
 
   // Initialize schema from form data
   useEffect(() => {
-    if (form?.schema && !schema) {
-      setSchema(form.schema as FormSchema);
+    const formData = form as { schema?: FormSchema } | null | undefined;
+    if (formData?.schema && !schema) {
+      setSchema(formData.schema);
     }
   }, [form, schema, setSchema]);
 
-  // For new forms, generate schema from prompt
+  // Handle new form creation with prompt
   useEffect(() => {
-    if (formId === "new" && prompt && !schema) {
-      // This would trigger AI generation
-      // For now, initialize empty schema
-      setSchema(createEmptySchema());
-    }
-  }, [formId, prompt, schema, setSchema]);
+    async function initNewForm() {
+      if (formId !== "new" || isInitializing || initializedFormId) return;
+      if (!prompt && !template) {
+        // No prompt or template, just show builder with empty schema
+        setShowBuilder(true);
+        return;
+      }
 
-  if (formId === "new") {
+      setIsInitializing(true);
+
+      try {
+        // Create form in database
+        const newForm = await createForm.mutateAsync({
+          title: "Untitled Form",
+          description: "",
+          schema: createEmptySchema(),
+        });
+
+        // @ts-ignore - form ID is returned
+        const newFormId = newForm.id;
+
+        // Update URL without refresh using router.replace
+        router.replace(`/builder/${newFormId}?${prompt ? `prompt=${encodeURIComponent(prompt)}` : `template=${template}`}`);
+
+        setInitializedFormId(newFormId);
+        setShowBuilder(true);
+      } catch (err) {
+        console.error("Failed to create form:", err);
+        setIsInitializing(false);
+      }
+    }
+
+    initNewForm();
+  }, [formId, prompt, template, isInitializing, initializedFormId, createForm, router]);
+
+  // For existing forms or when we have a real formId, show builder
+  const displayFormId = formId !== "new" ? formId : initializedFormId;
+
+  // Show loading while initializing
+  if (formId === "new" && isInitializing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Creating your form...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // For new forms without prompt, show builder with empty schema
+  if (formId === "new" && showBuilder && !initializedFormId) {
     return <BuilderShell formId="new" initialSchema={createEmptySchema()} />;
   }
 
+  // When we have a real formId (after creation), render builder with AI handler
+  if (displayFormId && showBuilder) {
+    const formData = form as { schema?: FormSchema } | null | undefined;
+    const currentSchema = schema || formData?.schema;
+
+    return (
+      <>
+        <AIGenerationHandler formId={displayFormId} prompt={prompt} />
+        <BuilderShell formId={displayFormId} initialSchema={currentSchema} />
+      </>
+    );
+  }
+
+  // Loading state for existing forms
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -63,7 +164,20 @@ function BuilderContent() {
     );
   }
 
-  return <BuilderShell formId={formId} initialSchema={form?.schema as FormSchema} />;
+  // Existing form loaded
+  if (formId !== "new" && form) {
+    const formData = form as { schema: FormSchema };
+    return <BuilderShell formId={formId} initialSchema={formData.schema} />;
+  }
+
+  // Fallback - should not reach here normally
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <p className="text-muted-foreground">Form not found</p>
+      </div>
+    </div>
+  );
 }
 
 function LoadingFallback() {

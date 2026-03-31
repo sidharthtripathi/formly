@@ -19,14 +19,15 @@ export default function ResponsesPage() {
   const [search, setSearch] = useState("");
   const [selectedResponse, setSelectedResponse] = useState<Record<string, unknown> | null>(null);
 
-  const { data: form } = useForm(formId);
+  const formResult = useForm(formId);
+  const formData = (formResult.data as { title?: string; schema?: { fields?: unknown[] } } | undefined);
   const { data: responsesData, isLoading } = useResponses(formId, page);
   const exportResponses = useExportResponses();
 
   const responses = responsesData?.data || [];
   const totalPages = Math.ceil((responsesData?.data?.length || 0) / 20) || 1;
 
-  const schemaFields = (form?.schema as any)?.fields || [];
+  const schemaFields = formData?.schema?.fields || [];
 
   return (
     <motion.div
@@ -50,7 +51,7 @@ export default function ResponsesPage() {
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold">{form?.title || "Responses"}</h1>
+            <h1 className="text-2xl font-bold">{formData?.title || "Responses"}</h1>
             <p className="text-sm text-muted-foreground">
               {responses.length > 0 ? `${responses.length} responses` : "No responses yet"}
             </p>
