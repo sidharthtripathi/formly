@@ -2,15 +2,16 @@ import { useState, useCallback, useRef } from "react";
 import { useCreditStatus } from "./useUser";
 import { useUpdateForm } from "./useForms";
 import { useFormStore } from "@/stores/formStore";
-import type { FormSchema } from "@formly/shared/types/form-schema";
+import type { FormSchema, FormField } from "@formly/shared/types/form-schema";
 
 const AI_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 export function useFormGeneration(formId: string) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [streamedContent, setStreamedContent] = useState("");
   const eventSourceRef = useRef<EventSource | null>(null);
-  const { setSchema, setMode } = useFormStore();
+  const { setSchema, setMode, addStreamedField } = useFormStore();
   const { data: credits } = useCreditStatus();
   const updateForm = useUpdateForm();
 
@@ -24,6 +25,7 @@ export function useFormGeneration(formId: string) {
 
       setIsGenerating(true);
       setError(null);
+      setStreamedContent("");
 
       const params = new URLSearchParams({ prompt });
       const es = new EventSource(`${AI_API_URL}/api/ai/generate?${params}`);
@@ -31,10 +33,28 @@ export function useFormGeneration(formId: string) {
 
       let content = "";
 
+      // Handle raw text deltas for partial content display
       es.addEventListener("schema_delta", (e) => {
         try {
           const delta = JSON.parse(e.data);
           content += delta.text || "";
+          setStreamedContent(content);
+        } catch {}
+      });
+
+      // Handle completed fields for real-time rendering
+      es.addEventListener("field_complete", (e) => {
+        try {
+          const { field } = JSON.parse(e.data) as { field: FormField };
+          addStreamedField(field);
+        } catch {}
+      });
+
+      // Handle metadata (title, pages)
+      es.addEventListener("meta", (e) => {
+        try {
+          const { title, pages } = JSON.parse(e.data);
+          // Meta is handled through the final schema parse
         } catch {}
       });
 
@@ -62,7 +82,7 @@ export function useFormGeneration(formId: string) {
         setError("Connection error. Please try again.");
       };
     },
-    [credits, formId, setSchema, setMode, updateForm]
+    [credits, formId, setSchema, setMode, updateForm, addStreamedField]
   );
 
   const stop = useCallback(() => {
@@ -70,7 +90,7 @@ export function useFormGeneration(formId: string) {
     setIsGenerating(false);
   }, []);
 
-  return { generate, stop, isGenerating, error };
+  return { generate, stop, isGenerating, error, streamedContent };
 }
 
 export function useFormModification(formId: string) {

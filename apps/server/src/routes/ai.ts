@@ -20,6 +20,80 @@ function extractTextDelta(chunk: any): string | null {
   return null;
 }
 
+interface StreamField {
+  id: string;
+  type: string;
+  label: string;
+  [key: string]: unknown;
+}
+
+// Parse accumulated text to find complete field objects
+function extractCompletedFields(
+  accumulatedText: string,
+  lastProcessedIndex: number
+): { fields: StreamField[]; newIndex: number } {
+  const fields: StreamField[] = [];
+  let newIndex = lastProcessedIndex;
+
+  // Look for field objects: they start with {"id": and end with }
+  // We scan for complete field objects that were added since lastProcessedIndex
+  const fieldPattern = /\{"id":\s*"([^"]+)"[^}]*\}/g;
+  let match;
+
+  // Find the "fields": [ section
+  const fieldsStart = accumulatedText.indexOf('"fields":');
+  if (fieldsStart === -1 || fieldsStart < lastProcessedIndex) {
+    return { fields: [], newIndex };
+  }
+
+  // Scan from fieldsStart onwards for complete field objects
+  const scanText = accumulatedText.slice(fieldsStart);
+  let currentPos = 0;
+  let braceCount = 0;
+  let fieldStart = -1;
+  let inField = false;
+
+  for (let i = 0; i < scanText.length; i++) {
+    const char = scanText[i];
+
+    if (char === '{' && !inField) {
+      // Check if we're starting a field object
+      const remaining = scanText.slice(i, i + 10);
+      if (remaining.includes('"id":')) {
+        fieldStart = i;
+        inField = true;
+        braceCount = 1;
+      }
+    } else if (inField) {
+      if (char === '{') braceCount++;
+      else if (char === '}') {
+        braceCount--;
+        if (braceCount === 0 && fieldStart !== -1) {
+          // We have a complete field object
+          const fieldStr = scanText.slice(fieldStart, i + 1);
+          try {
+            // Only process if this is a NEW complete field (not previously processed)
+            const globalFieldStart = fieldsStart + fieldStart;
+            if (globalFieldStart >= lastProcessedIndex) {
+              const field = JSON.parse(fieldStr) as StreamField;
+              if (field.id && field.type && field.label) {
+                fields.push(field);
+                newIndex = fieldsStart + i + 1;
+              }
+            }
+          } catch {
+            // Not valid JSON, might be partial - ignore
+          }
+          fieldStart = -1;
+          inField = false;
+        }
+      }
+    }
+  }
+
+  return { fields, newIndex };
+}
+
 // GET /api/ai/generate - Generate form from prompt (SSE)
 // Note: Uses GET because EventSource only supports GET
 router.get("/generate", async (req, res) => {
@@ -55,11 +129,52 @@ Rules:
       messages: [{ role: "user", content: prompt }],
     });
 
+    let accumulatedText = "";
+    let lastProcessedFieldIndex = 0;
+    let sentInitialMeta = false;
+
     for await (const chunk of stream) {
       const text = extractTextDelta(chunk);
       if (text) {
-        res.write(`event: schema_delta\ndata: ${JSON.stringify({ text })}\n\n`);
-        res.flush();
+        accumulatedText += text;
+
+        // Send raw text for any partial content display
+        res.write(
+          `event: schema_delta\ndata: ${JSON.stringify({ text })}\n\n`
+        );
+
+        // Try to extract completed fields for real-time rendering
+        const { fields, newIndex } =
+          extractCompletedFields(accumulatedText, lastProcessedFieldIndex);
+
+        if (fields.length > 0) {
+          for (const field of fields) {
+            res.write(
+              `event: field_complete\ndata: ${JSON.stringify({ field })}\n\n`
+            );
+          }
+          lastProcessedFieldIndex = newIndex;
+        }
+
+        // Send metadata (title, pages) as soon as we have it
+        if (!sentInitialMeta) {
+          // Try to extract title and pages from accumulated text
+          const titleMatch = accumulatedText.match(/"title":\s*"([^"]*)"/);
+          const pagesMatch = accumulatedText.match(/"pages":\s*\[([^\]]*)\]/);
+
+          if (titleMatch || pagesMatch) {
+            res.write(
+              `event: meta\ndata: ${JSON.stringify({
+                title: titleMatch ? titleMatch[1] : null,
+                pages: pagesMatch ? pagesMatch[1] : null,
+              })}\n\n`
+            );
+            sentInitialMeta = true;
+          }
+        }
+
+        // @ts-expect-error flush exists at runtime but not in types
+        res.flush?.();
       }
     }
 
@@ -67,7 +182,9 @@ Rules:
     res.end();
   } catch (error) {
     console.error("AI generate error:", error);
-    res.write(`event: error\ndata: ${JSON.stringify({ error: "Generation failed" })}\n\n`);
+    res.write(
+      `event: error\ndata: ${JSON.stringify({ error: "Generation failed" })}\n\n`
+    );
     res.end();
   }
 });
@@ -117,7 +234,8 @@ Rules:
       const text = extractTextDelta(chunk);
       if (text) {
         res.write(`event: schema_delta\ndata: ${JSON.stringify({ text })}\n\n`);
-        res.flush();
+        // @ts-expect-error flush exists at runtime but not in types
+        res.flush?.();
       }
     }
 

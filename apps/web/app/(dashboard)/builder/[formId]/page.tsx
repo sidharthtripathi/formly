@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState, useRef } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import { BuilderShell } from "@/components/builder/BuilderShell";
 import { useFormStore } from "@/stores/formStore";
 import { useForm, useCreateForm } from "@/hooks/useForms";
@@ -34,7 +35,7 @@ function AIGenerationHandler({
   prompt: string | null;
   onGenerated?: () => void;
 }) {
-  const { schema } = useFormStore();
+  const { schema, clearStreamedFields, setGenerating } = useFormStore();
   const { generate, isGenerating } = useFormGeneration(formId);
   const hasGenerated = useRef(false);
 
@@ -45,15 +46,19 @@ function AIGenerationHandler({
     }
 
     hasGenerated.current = true;
+    // Clear any previous streamed fields and start fresh
+    clearStreamedFields();
+    setGenerating(true);
     generate(prompt);
-  }, [formId, prompt, schema, isGenerating, generate]);
+  }, [formId, prompt, schema, isGenerating, generate, clearStreamedFields, setGenerating]);
 
   // Call onGenerated callback when generation is complete
   useEffect(() => {
     if ((schema?.fields?.length ?? 0) > 0 && onGenerated) {
+      setGenerating(false);
       onGenerated();
     }
-  }, [schema, onGenerated]);
+  }, [schema, onGenerated, setGenerating]);
 
   return null;
 }
@@ -69,6 +74,7 @@ function BuilderContent() {
   const [isInitializing, setIsInitializing] = useState(false);
   const [initializedFormId, setInitializedFormId] = useState<string | null>(null);
   const [showBuilder, setShowBuilder] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
 
   const { data: form, isLoading } = useForm(formId);
   const { setSchema, schema } = useFormStore();
@@ -113,11 +119,13 @@ function BuilderContent() {
       } catch (err) {
         console.error("Failed to create form:", err);
         setIsInitializing(false);
+        setInitError(err instanceof Error ? err.message : "Failed to create form");
       }
     }
 
     initNewForm();
-  }, [formId, prompt, template, isInitializing, initializedFormId, createForm, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formId, prompt, template]);
 
   // For existing forms or when we have a real formId, show builder
   const displayFormId = formId !== "new" ? formId : initializedFormId;
@@ -129,6 +137,20 @@ function BuilderContent() {
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-muted-foreground">Creating your form...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state when form creation fails
+  if (formId === "new" && initError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-destructive mb-4">Failed to create form: {initError}</p>
+          <Button variant="outline" onClick={() => router.push("/")}>
+            Go back home
+          </Button>
         </div>
       </div>
     );

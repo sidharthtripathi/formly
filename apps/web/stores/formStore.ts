@@ -18,6 +18,7 @@ interface FormStore {
   selectedFieldId: string | null;
   isGenerating: boolean;
   builderMode: "ai" | "manual";
+  streamedFields: FormField[]; // Fields received in real-time during streaming
 
   setSchema: (schema: FormSchema) => void;
   applyDelta: (delta: SchemaDelta) => void;
@@ -27,6 +28,8 @@ interface FormStore {
   undo: () => void;
   redo: () => void;
   setGenerating: (v: boolean) => void;
+  addStreamedField: (field: FormField) => void;
+  clearStreamedFields: () => void;
 
   addField: (type: FieldType, pageIndex: number) => void;
   updateField: (fieldId: string, patch: Partial<FormField>) => void;
@@ -46,6 +49,7 @@ export const useFormStore = create<FormStore>()(
     selectedFieldId: null,
     isGenerating: false,
     builderMode: "ai",
+    streamedFields: [],
 
     setSchema: (schema) =>
       set((state) => {
@@ -56,6 +60,7 @@ export const useFormStore = create<FormStore>()(
           state.historyIndex = state.history.length - 1;
         }
         state.schema = schema;
+        state.streamedFields = []; // Clear streamed fields when complete schema is set
       }),
 
     applyDelta: (delta) =>
@@ -98,6 +103,19 @@ export const useFormStore = create<FormStore>()(
     setGenerating: (v) =>
       set((state) => {
         state.isGenerating = v;
+      }),
+
+    addStreamedField: (field) =>
+      set((state) => {
+        // Avoid duplicates
+        if (!state.streamedFields.find((f) => f.id === field.id)) {
+          state.streamedFields.push(field);
+        }
+      }),
+
+    clearStreamedFields: () =>
+      set((state) => {
+        state.streamedFields = [];
       }),
 
     addField: (type, pageIndex) =>
