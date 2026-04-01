@@ -2,10 +2,10 @@ import { config } from "dotenv";
 import * as path from "path";
 import { fileURLToPath } from "url";
 
-// Load .env from apps/server directory
+// Load .env from root directory (apps/server/src/index.ts -> apps/server/src -> apps/server -> project root)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const envPath = path.resolve(__dirname, "../.env");
+const envPath = path.resolve(__dirname, "../../../.env");
 config({ path: envPath });
 
 import express, { Express } from "express";

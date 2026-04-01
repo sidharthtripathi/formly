@@ -56,9 +56,9 @@ export function useSubmitResponse() {
 export function useExportResponses() {
   return useMutation({
     mutationFn: async (formId: string) => {
-      // Direct fetch to API - the browser cookie will be sent automatically
-      // and the Express server will validate the JWT from the cookie
-      const response = await fetch(`${API_URL}/api/forms/${formId}/responses/export`, {
+      // Call proxy route directly - browser sends NextAuth cookie to Next.js same-origin
+      // Proxy extracts user ID and forwards to Express
+      const response = await fetch(`/api/proxy/forms/${formId}/responses/export`, {
         credentials: "include",
       });
 

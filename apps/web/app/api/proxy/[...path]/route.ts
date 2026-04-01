@@ -45,8 +45,27 @@ async function proxyRequest(
     credentials: "include",
   });
 
-  const data = await response.json();
-  return NextResponse.json(data, { status: response.status });
+  // For CSV exports, stream the response directly
+  if (path.includes("/export")) {
+    const blob = await response.blob();
+    return new NextResponse(blob, {
+      status: response.status,
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": response.headers.get("Content-Disposition") || `attachment; filename="export.csv"`,
+      },
+    });
+  }
+
+  const contentType = response.headers.get("content-type");
+  if (contentType?.includes("application/json")) {
+    const data = await response.json();
+    return NextResponse.json(data, { status: response.status });
+  }
+
+  // For other responses, return as text
+  const text = await response.text();
+  return new NextResponse(text, { status: response.status });
 }
 
 export async function GET(request: NextRequest) {
