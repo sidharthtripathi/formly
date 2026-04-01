@@ -62,15 +62,23 @@ export async function authMiddleware(
 ): Promise<void> {
   const pathname = req.path;
 
+  // Debug: log auth details
+  console.log("[Auth] pathname:", pathname);
+  console.log("[Auth] X-User-Id header:", req.headers["x-user-id"]);
+  console.log("[Auth] Authorization header:", req.headers.authorization?.substring(0, 20));
+
   // Skip auth for public paths
   if (isPublicPath(pathname)) {
+    console.log("[Auth] Skipping - public path");
     next();
     return;
   }
 
   // Check for X-User-Id header (set by frontend authedFetch)
   const userId = req.headers["x-user-id"] as string | undefined;
+  console.log("[Auth] Checking X-User-Id:", userId);
   if (userId && await validateUser(userId, req)) {
+    console.log("[Auth] Validated via X-User-Id, user:", req.user?.id);
     next();
     return;
   }

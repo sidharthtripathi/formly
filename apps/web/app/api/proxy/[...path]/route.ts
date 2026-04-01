@@ -7,11 +7,18 @@ async function proxyRequest(
   request: NextRequest,
   method: string
 ): Promise<NextResponse> {
+  // Debug: log the AUTH_SECRET being used (first 10 chars only for security)
+  console.log("[Proxy] AUTH_SECRET prefix:", process.env.AUTH_SECRET?.substring(0, 10));
+  console.log("[Proxy] NEXTAUTH_URL:", process.env.NEXTAUTH_URL);
+  console.log("[Proxy] Cookie header:", request.headers.get("cookie")?.substring(0, 100));
+
   // Use getToken at Edge Runtime for auth
   const token = await getToken({
     req: request,
     secret: process.env.AUTH_SECRET,
   });
+
+  console.log("[Proxy] Token decoded:", token);
 
   if (!token?.id) {
     console.error("Proxy auth failed - no valid token:", token);
