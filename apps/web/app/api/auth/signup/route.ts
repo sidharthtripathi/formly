@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db-server";
-import { users } from "@/lib/db";
-import { eq } from "drizzle-orm";
+import { prisma } from "@/lib/db-server";
 import bcrypt from "bcryptjs";
 
 export async function POST(request: NextRequest) {
@@ -16,8 +14,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user already exists
-    const existingUser = await db.query.users.findFirst({
-      where: eq(users.email, email),
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
     });
 
     if (existingUser) {
@@ -30,19 +28,19 @@ export async function POST(request: NextRequest) {
     // Hash password
     const passwordHash = await bcrypt.hash(password, 12);
 
-    // Create user (id is auto-generated as UUID by defaultRandom())
-    const [newUser] = await db
-      .insert(users)
-      .values({
+    // Create user (id is auto-generated as UUID by default)
+    const newUser = await prisma.user.create({
+      data: {
         email,
         name: name || null,
         passwordHash,
-      })
-      .returning({
-        id: users.id,
-        email: users.email,
-        name: users.name,
-      });
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+      },
+    });
 
     return NextResponse.json({ data: newUser }, { status: 201 });
   } catch (error) {

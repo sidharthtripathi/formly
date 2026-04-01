@@ -1,6 +1,5 @@
 import { Router } from "express";
-import { db, marketplaceListings, marketplaceUpvotes, templates } from "../db/index.js";
-import { eq, desc, and } from "drizzle-orm";
+import { prisma } from "../db/index.js";
 import { AuthRequest } from "../middleware/auth.js";
 import jwt from "jsonwebtoken";
 import { validateUser } from "../middleware/auth.js";
@@ -42,10 +41,9 @@ marketplaceRouter.get("/", async (req, res) => {
   try {
     const { category, sort = "upvotes", q } = req.query as { category?: string; sort?: string; q?: string };
 
-    let listings = await db
-      .select()
-      .from(marketplaceListings)
-      .limit(50);
+    let listings = await prisma.marketplaceListing.findMany({
+      take: 50,
+    });
 
     // Filter by category if provided
     if (category) {
@@ -78,29 +76,27 @@ marketplaceRouter.post("/", async (req: AuthRequest, res) => {
     }
 
     // First create the template
-    const [template] = await db
-      .insert(templates)
-      .values({
+    const template = await prisma.template.create({
+      data: {
         ownerId: user.id,
         title: req.body.title,
         description: req.body.description,
         schema: req.body.schema,
         isPublic: true,
-      })
-      .returning();
+      },
+    });
 
     // Then create the marketplace listing
-    const [listing] = await db
-      .insert(marketplaceListings)
-      .values({
+    const listing = await prisma.marketplaceListing.create({
+      data: {
         templateId: template.id,
         publisherId: user.id,
         title: req.body.title,
         description: req.body.description,
         category: req.body.category,
         tags: req.body.tags,
-      })
-      .returning();
+      },
+    });
 
     return res.status(201).json({ data: listing });
   } catch (error) {
@@ -117,11 +113,9 @@ marketplaceRouter.delete("/:id", async (req: AuthRequest, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const [listing] = await db
-      .select()
-      .from(marketplaceListings)
-      .where(eq(marketplaceListings.id, req.params.id))
-      .limit(1);
+    const listing = await prisma.marketplaceListing.findUnique({
+      where: { id: req.params.id },
+    });
 
     if (!listing) {
       return res.status(404).json({ error: "Listing not found" });
@@ -131,7 +125,9 @@ marketplaceRouter.delete("/:id", async (req: AuthRequest, res) => {
       return res.status(403).json({ error: "Forbidden" });
     }
 
-    await db.delete(marketplaceListings).where(eq(marketplaceListings.id, req.params.id));
+    await prisma.marketplaceListing.delete({
+      where: { id: req.params.id },
+    });
     return res.json({ success: true });
   } catch (error) {
     console.error("Delete marketplace listing error:", error);
@@ -147,57 +143,55 @@ marketplaceRouter.post("/:id/upvote", async (req: AuthRequest, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const [listing] = await db
-      .select()
-      .from(marketplaceListings)
-      .where(eq(marketplaceListings.id, req.params.id))
-      .limit(1);
+    const listing = await prisma.marketplaceListing.findUnique({
+      where: { id: req.params.id },
+    });
 
     if (!listing) {
       return res.status(404).json({ error: "Listing not found" });
     }
 
     // Check if already upvoted
-    const [existing] = await db
-      .select()
-      .from(marketplaceUpvotes)
-      .where(
-        and(
-          eq(marketplaceUpvotes.userId, user.id),
-          eq(marketplaceUpvotes.listingId, req.params.id)
-        )
-      )
-      .limit(1);
+    const existing = await prisma.marketplaceUpvote.findUnique({
+      where: {
+        userId_listingId: {
+          userId: user.id,
+          listingId: req.params.id,
+        },
+      },
+    });
 
     if (existing) {
       // Remove upvote and decrement count
-      await db
-        .delete(marketplaceUpvotes)
-        .where(
-          and(
-            eq(marketplaceUpvotes.userId, user.id),
-            eq(marketplaceUpvotes.listingId, req.params.id)
-          )
-        );
+      await prisma.marketplaceUpvote.delete({
+        where: {
+          userId_listingId: {
+            userId: user.id,
+            listingId: req.params.id,
+          },
+        },
+      });
 
-      await db
-        .update(marketplaceListings)
-        .set({ upvoteCount: Math.max(0, listing.upvoteCount - 1) })
-        .where(eq(marketplaceListings.id, req.params.id));
+      await prisma.marketplaceListing.update({
+        where: { id: req.params.id },
+        data: { upvoteCount: Math.max(0, listing.upvoteCount - 1) },
+      });
 
       return res.json({ upvoted: false });
     }
 
     // Add upvote and increment count
-    await db.insert(marketplaceUpvotes).values({
-      userId: user.id,
-      listingId: req.params.id,
+    await prisma.marketplaceUpvote.create({
+      data: {
+        userId: user.id,
+        listingId: req.params.id,
+      },
     });
 
-    await db
-      .update(marketplaceListings)
-      .set({ upvoteCount: listing.upvoteCount + 1 })
-      .where(eq(marketplaceListings.id, req.params.id));
+    await prisma.marketplaceListing.update({
+      where: { id: req.params.id },
+      data: { upvoteCount: listing.upvoteCount + 1 },
+    });
 
     return res.json({ upvoted: true });
   } catch (error) {
@@ -214,44 +208,39 @@ marketplaceRouter.post("/:id/copy", async (req: AuthRequest, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const [listing] = await db
-      .select()
-      .from(marketplaceListings)
-      .where(eq(marketplaceListings.id, req.params.id))
-      .limit(1);
+    const listing = await prisma.marketplaceListing.findUnique({
+      where: { id: req.params.id },
+    });
 
     if (!listing) {
       return res.status(404).json({ error: "Listing not found" });
     }
 
-    const [template] = await db
-      .select()
-      .from(templates)
-      .where(eq(templates.id, listing.templateId))
-      .limit(1);
+    const template = await prisma.template.findUnique({
+      where: { id: listing.templateId },
+    });
 
     if (!template) {
       return res.status(404).json({ error: "Template not found" });
     }
 
     // Create a copy of the template as a form
-    const [newForm] = await db
-      .insert(templates)
-      .values({
+    const newForm = await prisma.template.create({
+      data: {
         ownerId: user.id,
         title: `${template.title} (Copy)`,
         description: template.description,
         schema: template.schema,
         isPublic: false,
         sourceFormId: template.id,
-      })
-      .returning();
+      },
+    });
 
     // Increment copy count on listing
-    await db
-      .update(marketplaceListings)
-      .set({ copyCount: listing.copyCount + 1 })
-      .where(eq(marketplaceListings.id, req.params.id));
+    await prisma.marketplaceListing.update({
+      where: { id: req.params.id },
+      data: { copyCount: listing.copyCount + 1 },
+    });
 
     return res.status(201).json({ data: newForm });
   } catch (error) {

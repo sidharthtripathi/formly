@@ -1,11 +1,7 @@
 import { Router } from "express";
 import Anthropic from "@anthropic-ai/sdk";
-import { db } from "../db/index.js";
-import * as schema from "@formly/shared/db";
-import { eq } from "drizzle-orm";
+import { prisma } from "../db/index.js";
 import { AuthRequest } from "../middleware/auth.js";
-
-const users = schema.users;
 
 const router: Router = Router();
 
@@ -27,8 +23,15 @@ interface StreamField {
 
 // Check and decrement credits for a user
 async function checkAndDecrementCredits(userId: string): Promise<{ allowed: boolean; error?: string; creditsUsed?: number; limit?: number }> {
-  const dbUserResult = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-  const dbUser = dbUserResult[0];
+  const dbUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      plan: true,
+      aiCreditsUsed: true,
+      aiCreditsResetAt: true,
+    },
+  });
 
   if (!dbUser) {
     return { allowed: false, error: "User not found" };
@@ -50,13 +53,12 @@ async function checkAndDecrementCredits(userId: string): Promise<{ allowed: bool
   }
 
   // Decrement credits
-  await db
-    .update(users)
-    .set({
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
       aiCreditsUsed: dbUser.aiCreditsUsed + 1,
-      updatedAt: new Date(),
-    })
-    .where(eq(users.id, userId));
+    },
+  });
 
   return {
     allowed: true,

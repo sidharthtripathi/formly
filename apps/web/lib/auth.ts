@@ -1,15 +1,13 @@
 import NextAuth from "next-auth";
-import { DrizzleAdapter } from "@auth/drizzle-adapter";
+import { PrismaAdapter } from "@auth/prisma-adapter";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { createId } from "@paralleldrive/cuid2";
-import { db } from "@/lib/db-server";
-import { users } from "@formly/shared/db/schema";
-import { eq } from "drizzle-orm";
+import { prisma } from "@/lib/db-server";
 import bcrypt from "bcryptjs";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: DrizzleAdapter(db),
+  adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
@@ -34,8 +32,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const email = credentials.email as string;
         const password = credentials.password as string;
 
-        const user = await db.query.users.findFirst({
-          where: eq(users.email, email),
+        const user = await prisma.user.findUnique({
+          where: { email },
         });
 
         if (!user || !user.passwordHash) {
@@ -72,29 +70,30 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async signIn({ user, account }) {
       if (account?.provider === "google") {
         // Check if user exists
-        const existingUser = await db.query.users.findFirst({
-          where: eq(users.email, user.email!),
+        const existingUser = await prisma.user.findUnique({
+          where: { email: user.email! },
         });
 
         if (existingUser) {
           // Update existing user with Google info if not already set
-          await db
-            .update(users)
-            .set({
+          await prisma.user.update({
+            where: { id: existingUser.id },
+            data: {
               googleId: user.id,
               name: user.name,
               avatarUrl: user.image,
-              updatedAt: new Date(),
-            })
-            .where(eq(users.id, existingUser.id));
+            },
+          });
         } else {
           // Create new user
-          await db.insert(users).values({
-            id: createId(),
-            googleId: user.id,
-            email: user.email!,
-            name: user.name,
-            avatarUrl: user.image,
+          await prisma.user.create({
+            data: {
+              id: createId(),
+              googleId: user.id,
+              email: user.email!,
+              name: user.name,
+              avatarUrl: user.image,
+            },
           });
         }
       }

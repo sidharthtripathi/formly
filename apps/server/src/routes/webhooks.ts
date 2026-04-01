@@ -1,6 +1,5 @@
 import { Router } from "express";
-import { db, webhooks, forms } from "../db/index.js";
-import { eq } from "drizzle-orm";
+import { prisma } from "../db/index.js";
 import { z } from "zod";
 import { AuthRequest } from "../middleware/auth.js";
 
@@ -132,10 +131,9 @@ router.get("/", async (req: AuthRequest, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const userWebhooks = await db
-      .select()
-      .from(webhooks)
-      .where(eq(webhooks.ownerId, user.id));
+    const userWebhooks = await prisma.webhook.findMany({
+      where: { ownerId: user.id },
+    });
 
     return res.json({ data: userWebhooks });
   } catch (error) {
@@ -159,16 +157,15 @@ router.post("/", async (req: AuthRequest, res) => {
 
     const { url, events, secret, formId } = parsed.data;
 
-    const [webhook] = await db
-      .insert(webhooks)
-      .values({
+    const webhook = await prisma.webhook.create({
+      data: {
         ownerId: user.id,
         url,
         events,
         secret: secret || crypto.randomUUID(),
         formId: formId || null,
-      })
-      .returning();
+      },
+    });
 
     return res.status(201).json({ data: webhook });
   } catch (error) {
@@ -185,11 +182,9 @@ router.delete("/:id", async (req: AuthRequest, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const [existing] = await db
-      .select()
-      .from(webhooks)
-      .where(eq(webhooks.id, req.params.id))
-      .limit(1);
+    const existing = await prisma.webhook.findUnique({
+      where: { id: req.params.id },
+    });
 
     if (!existing) {
       return res.status(404).json({ error: "Webhook not found" });
@@ -199,7 +194,9 @@ router.delete("/:id", async (req: AuthRequest, res) => {
       return res.status(403).json({ error: "Forbidden" });
     }
 
-    await db.delete(webhooks).where(eq(webhooks.id, req.params.id));
+    await prisma.webhook.delete({
+      where: { id: req.params.id },
+    });
     return res.json({ success: true });
   } catch (error) {
     console.error("Delete webhook error:", error);
@@ -215,11 +212,9 @@ router.post("/:id/test", async (req: AuthRequest, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const [webhook] = await db
-      .select()
-      .from(webhooks)
-      .where(eq(webhooks.id, req.params.id))
-      .limit(1);
+    const webhook = await prisma.webhook.findUnique({
+      where: { id: req.params.id },
+    });
 
     if (!webhook) {
       return res.status(404).json({ error: "Webhook not found" });

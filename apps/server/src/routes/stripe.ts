@@ -1,7 +1,6 @@
 import { Router, Request, Response } from "express";
 import Stripe from "stripe";
-import { db, users, subscriptions } from "../db/index.js";
-import { eq } from "drizzle-orm";
+import { prisma } from "../db/index.js";
 import { AuthRequest } from "../middleware/auth.js";
 
 const router: Router = Router();
@@ -28,11 +27,10 @@ router.post("/create-checkout", async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const [dbUser] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, user.id))
-      .limit(1);
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { stripeCustomerId: true },
+    });
 
     if (!dbUser?.stripeCustomerId) {
       return res.status(400).json({ error: "No Stripe customer found" });
@@ -71,11 +69,10 @@ router.post("/portal", async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const [dbUser] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, user.id))
-      .limit(1);
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { stripeCustomerId: true },
+    });
 
     if (!dbUser?.stripeCustomerId) {
       return res.status(400).json({ error: "No Stripe customer found" });
@@ -123,23 +120,22 @@ router.post("/", async (req: Request, res: Response) => {
       case "customer.subscription.created":
       case "customer.subscription.updated": {
         const sub = event.data.object as Stripe.Subscription;
-        await db
-          .update(subscriptions)
-          .set({
+        await prisma.subscription.update({
+          where: { stripeSubscriptionId: sub.id },
+          data: {
             status: sub.status as "active" | "canceled" | "past_due",
             stripePriceId: sub.items.data[0].price.id,
             currentPeriodEnd: new Date(sub.current_period_end * 1000),
-            updatedAt: new Date(),
-          })
-          .where(eq(subscriptions.stripeSubscriptionId, sub.id));
+          },
+        });
         break;
       }
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
-        await db
-          .update(users)
-          .set({ plan: "free", updatedAt: new Date() })
-          .where(eq(users.stripeCustomerId, sub.customer as string));
+        await prisma.user.update({
+          where: { stripeCustomerId: sub.customer as string },
+          data: { plan: "free" },
+        });
         break;
       }
       case "checkout.session.completed": {
@@ -148,11 +144,9 @@ router.post("/", async (req: Request, res: Response) => {
           const customerId = session.customer as string;
           const subscription = await stripeClient.subscriptions.retrieve(session.subscription as string);
 
-          const [user] = await db
-            .select()
-            .from(users)
-            .where(eq(users.stripeCustomerId, customerId))
-            .limit(1);
+          const user = await prisma.user.findUnique({
+            where: { stripeCustomerId: customerId },
+          });
 
           if (!user) {
             console.error("Webhook: User not found for customer:", customerId);
@@ -160,37 +154,36 @@ router.post("/", async (req: Request, res: Response) => {
           }
 
           // Upsert subscription - update if exists, insert if not
-          const [existingSub] = await db
-              .select()
-              .from(subscriptions)
-              .where(eq(subscriptions.stripeSubscriptionId, subscription.id))
-              .limit(1);
+          const existingSub = await prisma.subscription.findUnique({
+            where: { stripeSubscriptionId: subscription.id },
+          });
 
           if (existingSub) {
-            await db
-              .update(subscriptions)
-              .set({
+            await prisma.subscription.update({
+              where: { id: existingSub.id },
+              data: {
                 status: subscription.status as "active" | "canceled" | "past_due",
                 stripePriceId: subscription.items.data[0].price.id,
                 currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-                updatedAt: new Date(),
-              })
-              .where(eq(subscriptions.id, existingSub.id));
+              },
+            });
           } else {
-            await db.insert(subscriptions).values({
-              userId: user.id,
-              stripeSubscriptionId: subscription.id,
-              stripePriceId: subscription.items.data[0].price.id,
-              status: subscription.status as "active" | "canceled" | "past_due",
-              currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+            await prisma.subscription.create({
+              data: {
+                userId: user.id,
+                stripeSubscriptionId: subscription.id,
+                stripePriceId: subscription.items.data[0].price.id,
+                status: subscription.status as "active" | "canceled" | "past_due",
+                currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+              },
             });
           }
 
           // Update user to pro plan
-          await db
-            .update(users)
-            .set({ plan: "pro", updatedAt: new Date() })
-            .where(eq(users.id, user.id));
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { plan: "pro" },
+          });
         }
         break;
       }

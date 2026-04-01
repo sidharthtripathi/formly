@@ -14,12 +14,10 @@
       "cache": false
     },
     "db:migrate": {
-      "cache": false,
-      "outputs": ["apps/server/drizzle/**"]
+      "cache": false
     },
     "db:push": {
-      "cache": false,
-      "outputs": ["apps/server/drizzle/**"]
+      "cache": false
     },
     "db:studio": {
       "cache": false

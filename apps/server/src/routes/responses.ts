@@ -1,6 +1,5 @@
 import { Router, Request } from "express";
-import { db, responses, forms } from "../db/index.js";
-import { eq, desc } from "drizzle-orm";
+import { prisma } from "../db/index.js";
 import { AuthRequest } from "../middleware/auth.js";
 
 export const responsesRouter: Router = Router();
@@ -15,11 +14,9 @@ responsesRouter.post("/", async (req: Request<{ id: string }>, res) => {
       return res.status(400).json({ error: "Form ID required" });
     }
 
-    const [form] = await db
-      .select()
-      .from(forms)
-      .where(eq(forms.id, formId))
-      .limit(1);
+    const form = await prisma.form.findUnique({
+      where: { id: formId },
+    });
 
     if (!form || !form.isPublished) {
       return res.status(404).json({ error: "Form not found or not published" });
@@ -29,15 +26,14 @@ responsesRouter.post("/", async (req: Request<{ id: string }>, res) => {
       return res.status(400).json({ error: "Answers are required" });
     }
 
-    const [response] = await db
-      .insert(responses)
-      .values({
+    const response = await prisma.response.create({
+      data: {
         formId: formId,
         answers: req.body.answers,
         metadata: req.body.metadata || {},
         respondentId: req.body.respondentId || null,
-      })
-      .returning();
+      },
+    });
 
     return res.status(201).json({ data: response });
   } catch (error) {
@@ -59,11 +55,9 @@ responsesRouter.get("/", async (req: AuthRequest, res) => {
       return res.status(400).json({ error: "Form ID required" });
     }
 
-    const [form] = await db
-      .select()
-      .from(forms)
-      .where(eq(forms.id, formId))
-      .limit(1);
+    const form = await prisma.form.findUnique({
+      where: { id: formId },
+    });
 
     if (!form) {
       return res.status(404).json({ error: "Form not found" });
@@ -81,12 +75,11 @@ responsesRouter.get("/", async (req: AuthRequest, res) => {
     const limit = 20;
     const offset = (page - 1) * limit;
 
-    const formResponses = await db
-      .select()
-      .from(responses)
-      .where(eq(responses.formId, formId))
-      .limit(limit)
-      .offset(offset);
+    const formResponses = await prisma.response.findMany({
+      where: { formId: formId },
+      take: limit,
+      skip: offset,
+    });
 
     return res.json({ data: formResponses, page, limit });
   } catch (error) {
@@ -108,11 +101,9 @@ responsesRouter.get("/export", async (req: AuthRequest, res) => {
       return res.status(400).json({ error: "Form ID required" });
     }
 
-    const [form] = await db
-      .select()
-      .from(forms)
-      .where(eq(forms.id, formId))
-      .limit(1);
+    const form = await prisma.form.findUnique({
+      where: { id: formId },
+    });
 
     if (!form) {
       return res.status(404).json({ error: "Form not found" });
@@ -122,10 +113,9 @@ responsesRouter.get("/export", async (req: AuthRequest, res) => {
       return res.status(403).json({ error: "Forbidden" });
     }
 
-    const formResponses = await db
-      .select()
-      .from(responses)
-      .where(eq(responses.formId, formId));
+    const formResponses = await prisma.response.findMany({
+      where: { formId: formId },
+    });
 
     const schemaFields = (form.schema as Record<string, unknown>)?.fields as Array<{ id: string; label: string }> || [];
     const headers = ["Submitted At", ...schemaFields.map((f) => f.label)];

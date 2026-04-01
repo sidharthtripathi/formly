@@ -1,5 +1,4 @@
-import * as schema from "@formly/shared/db/schema";
+// This file re-exports types from Prisma schema for use throughout the app
+// The actual database client is in db-server.ts
 
-// Re-export schema for use throughout the app
-export { schema };
-export const { users } = schema;
+export {};
