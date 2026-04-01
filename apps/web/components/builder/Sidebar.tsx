@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useForms } from "@/hooks/useForms";
+import { useUser } from "@/hooks/useUser";
 import { useDeleteForm } from "@/hooks/useForms";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,7 +33,10 @@ import {
   Sparkles,
   LayoutDashboard,
   Store,
+  LogOut,
+  User as UserIcon,
 } from "lucide-react";
+import { signOut } from "next-auth/react";
 
 type FormListItem = {
   id: string;
@@ -44,6 +48,7 @@ type FormListItem = {
 
 export function Sidebar() {
   const { data: forms, isLoading } = useForms() as { data: FormListItem[] | undefined; isLoading: boolean };
+  const { data: user } = useUser();
   const deleteForm = useDeleteForm();
   const [open, setOpen] = useState(true);
   const [isCollapsed, setIsCollapsed] = useState(true);
@@ -156,22 +161,65 @@ export function Sidebar() {
               </div>
             </div>
 
-            {/* Footer Links */}
-            <div className="p-4 border-t space-y-1">
-              <Link
-                href="/templates"
-                className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors"
-              >
-                <Save className="w-4 h-4" />
-                My Templates
-              </Link>
-              <Link
-                href="/marketplace"
-                className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors"
-              >
-                <Store className="w-4 h-4" />
-                Marketplace
-              </Link>
+            {/* User Section */}
+            <div className="p-4 border-t">
+              {user ? (
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0">
+                    {user.avatarUrl ? (
+                      <img
+                        src={user.avatarUrl}
+                        alt={user.name || "User"}
+                        className="w-9 h-9 rounded-full"
+                      />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                        <UserIcon className="w-5 h-5 text-primary" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {user.name || "User"}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {user.email}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => signOut({ callbackUrl: "/login" })}
+                    className="p-2 rounded-md hover:bg-muted transition-colors"
+                    title="Sign out"
+                  >
+                    <LogOut className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-muted animate-pulse" />
+                  <div className="flex-1 space-y-1">
+                    <div className="h-3 w-20 bg-muted rounded animate-pulse" />
+                    <div className="h-2 w-28 bg-muted rounded animate-pulse" />
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-3 space-y-1">
+                <Link
+                  href="/templates"
+                  className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors"
+                >
+                  <Save className="w-4 h-4" />
+                  My Templates
+                </Link>
+                <Link
+                  href="/marketplace"
+                  className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors"
+                >
+                  <Store className="w-4 h-4" />
+                  Marketplace
+                </Link>
+              </div>
             </div>
           </div>
         </motion.aside>
