@@ -3,7 +3,7 @@ import * as path from "path";
 import * as fs from "fs";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import * as schema from "@formly/shared/db/schema.js";
+import * as schema from "@formly/shared/db";
 
 // Load .env from root directory
 const envPath = path.resolve(process.cwd(), "../../.env");

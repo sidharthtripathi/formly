@@ -1,9 +1,11 @@
 import { Router } from "express";
 import Anthropic from "@anthropic-ai/sdk";
 import { db } from "../db/index.js";
-import { users } from "@formly/shared/db/schema.js";
+import * as schema from "@formly/shared/db";
 import { eq } from "drizzle-orm";
 import { AuthRequest } from "../middleware/auth.js";
+
+const users = schema.users;
 
 const router: Router = Router();
 
