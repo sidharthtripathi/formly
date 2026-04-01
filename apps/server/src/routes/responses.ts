@@ -1,13 +1,13 @@
-import { Router } from "express";
+import { Router, Request } from "express";
 import { db, responses, forms } from "../db/index.js";
 import { eq, desc } from "drizzle-orm";
 import { AuthRequest } from "../middleware/auth.js";
 
-export const responsesRouter = Router();
+export const responsesRouter: Router = Router();
 
 // POST /api/forms/:id/responses - Submit form response (public)
 // This route is mounted at /api/forms/:id/responses in index.ts
-responsesRouter.post("/", async (req, res) => {
+responsesRouter.post("/", async (req: Request<{ id: string }>, res) => {
   try {
     // The formId comes from the parent router's :id parameter
     const formId = req.params.id;
@@ -125,7 +125,7 @@ responsesRouter.get("/export", async (req: AuthRequest, res) => {
     const headers = ["Submitted At", ...schemaFields.map((f) => f.label)];
     const rows = formResponses.map((r) => [
       r.submittedAt,
-      ...schemaFields.map((f) => r.answers?.[f.id] || ""),
+      ...schemaFields.map((f) => (r.answers as Record<string, unknown>)?.[f.id] || ""),
     ]);
 
     // Proper CSV escaping - wrap fields in quotes and escape internal quotes

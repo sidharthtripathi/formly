@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename);
 const envPath = path.resolve(__dirname, "../.env");
 config({ path: envPath });
 
-import express from "express";
+import express, { Express } from "express";
 import cors from "cors";
 import { rateLimitMiddleware } from "./middleware/rate-limit.js";
 import { authMiddleware } from "./middleware/auth.js";
@@ -23,7 +23,7 @@ import { uploadsRouter } from "./routes/uploads.js";
 import { webhooksRouter } from "./routes/webhooks.js";
 import { staticUploads } from "./routes/static.js";
 
-const app = express();
+const app: Express = express();
 const PORT = process.env.PORT || 3001;
 
 // Trust proxy for correct IP detection behind reverse proxy
@@ -58,8 +58,10 @@ app.get("/health", (_req, res) => {
 // Public API routes (no auth required)
 app.use("/api/forms/public", formsRouter);
 app.use("/api/forms/:id/responses", responsesRouter); // POST only (public submission)
-app.use("/api/ai", aiRouter);
 app.use("/webhooks/stripe", stripeRouter);
+
+// Protected API routes (auth required)
+app.use("/api/ai", authMiddleware, aiRouter);
 
 // Protected API routes (auth required)
 app.use("/api/forms", authMiddleware, formsRouter);

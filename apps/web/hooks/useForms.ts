@@ -1,12 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { FormSchema } from "@formly/shared/types/form-schema";
+import type { Form } from "@formly/shared/types/api";
 import { authedFetch, API_URL } from "@/lib/api-helpers";
 
 export function useForms() {
   return useQuery({
     queryKey: ["forms"],
     queryFn: async () => {
-      const data = await authedFetch<{ data: unknown[] }>("/api/forms");
+      const data = await authedFetch<{ data: Form[] }>("/api/forms");
       return data.data || [];
     },
   });
@@ -16,10 +17,10 @@ export function useForm(formId: string) {
   return useQuery({
     queryKey: ["forms", formId],
     queryFn: async () => {
-      const data = await authedFetch<{ data: unknown }>(`/api/forms/${formId}`);
+      const data = await authedFetch<{ data: Form }>(`/api/forms/${formId}`);
       return data.data;
     },
-    enabled: !!formId,
+    enabled: !!formId && formId !== "new",
   });
 }
 
@@ -32,7 +33,7 @@ export function usePublicForm(slug: string) {
         throw new Error("Form not found");
       }
       const data = await res.json();
-      return data.data;
+      return data.data as Form;
     },
     enabled: !!slug,
   });
@@ -42,7 +43,7 @@ export function useCreateForm() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: { title: string; description?: string; schema: FormSchema }) => {
-      const data = await authedFetch<{ data: unknown }>("/api/forms", {
+      const data = await authedFetch<{ data: Form }>("/api/forms", {
         method: "POST",
         body: JSON.stringify(payload),
       });
@@ -58,7 +59,7 @@ export function useUpdateForm() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ formId, ...payload }: { formId: string; title?: string; description?: string; schema?: FormSchema; status?: string }) => {
-      const data = await authedFetch<{ data: unknown }>(`/api/forms/${formId}`, {
+      const data = await authedFetch<{ data: Form }>(`/api/forms/${formId}`, {
         method: "PATCH",
         body: JSON.stringify(payload),
       });
@@ -88,7 +89,7 @@ export function usePublishForm() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (formId: string) => {
-      const data = await authedFetch<{ data: unknown }>(`/api/forms/${formId}/publish`, {
+      const data = await authedFetch<{ data: Form }>(`/api/forms/${formId}/publish`, {
         method: "POST",
       });
       return data.data;

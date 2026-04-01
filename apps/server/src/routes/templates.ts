@@ -3,7 +3,7 @@ import { db, templates, forms } from "../db/index.js";
 import { eq } from "drizzle-orm";
 import { AuthRequest } from "../middleware/auth.js";
 
-export const templatesRouter = Router();
+export const templatesRouter: Router = Router();
 
 // GET /api/templates - List user's templates
 templatesRouter.get("/", async (req: AuthRequest, res) => {

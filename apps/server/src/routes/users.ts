@@ -3,7 +3,7 @@ import { db, users } from "../db/index.js";
 import { eq } from "drizzle-orm";
 import { AuthRequest } from "../middleware/auth.js";
 
-export const usersRouter = Router();
+export const usersRouter: Router = Router();
 
 // GET /api/users/me - Get current user
 usersRouter.get("/me", async (req: AuthRequest, res) => {

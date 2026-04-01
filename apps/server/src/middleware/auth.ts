@@ -18,8 +18,6 @@ const PUBLIC_PATHS = [
   "/health",
   "/api/forms/public",
   "/api/forms/:id/responses",
-  "/api/ai/generate",
-  "/api/ai/modify",
   "/webhooks/stripe",
 ];
 
@@ -31,6 +29,30 @@ function isPublicPath(pathname: string): boolean {
     }
     return pathname.includes(path);
   });
+}
+
+// Validate user and attach to request
+async function validateUser(userId: string | undefined, req: AuthRequest): Promise<boolean> {
+  if (!userId) return false;
+
+  try {
+    const dbUser = await db.query.users.findFirst({
+      where: eq(users.id, userId),
+    });
+
+    if (dbUser) {
+      req.user = {
+        id: dbUser.id,
+        email: dbUser.email,
+        name: dbUser.name ?? undefined,
+        avatarUrl: dbUser.avatarUrl ?? undefined,
+      };
+      return true;
+    }
+  } catch (error) {
+    console.error("Auth DB error:", error);
+  }
+  return false;
 }
 
 export async function authMiddleware(
@@ -48,25 +70,16 @@ export async function authMiddleware(
 
   // Check for X-User-Id header (set by frontend authedFetch)
   const userId = req.headers["x-user-id"] as string | undefined;
-  if (userId) {
-    try {
-      const dbUser = await db.query.users.findFirst({
-        where: eq(users.id, userId),
-      });
+  if (userId && await validateUser(userId, req)) {
+    next();
+    return;
+  }
 
-      if (dbUser) {
-        req.user = {
-          id: dbUser.id,
-          email: dbUser.email,
-          name: dbUser.name,
-          avatarUrl: dbUser.avatarUrl,
-        };
-        next();
-        return;
-      }
-    } catch (error) {
-      console.error("Auth DB error:", error);
-    }
+  // For AI endpoints, also check query param userId (used by SSE EventSource)
+  const queryUserId = req.query.userId as string | undefined;
+  if (pathname.startsWith("/api/ai/") && queryUserId && await validateUser(queryUserId, req)) {
+    next();
+    return;
   }
 
   // Fallback to Bearer token validation

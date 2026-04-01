@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { AuthRequest } from "../middleware/auth.js";
 
-const router = Router();
+const router: Router = Router();
 
 const webhookEventTypes = [
   "form.submission.created",

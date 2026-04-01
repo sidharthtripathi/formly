@@ -1,7 +1,10 @@
 import { Router } from "express";
 import Anthropic from "@anthropic-ai/sdk";
+import { db, users } from "../db/index.js";
+import { eq } from "drizzle-orm";
+import { AuthRequest } from "../middleware/auth.js";
 
-const router = Router();
+const router: Router = Router();
 
 const client = process.env.ANTHROPIC_API_KEY
   ? new Anthropic({
@@ -9,6 +12,56 @@ const client = process.env.ANTHROPIC_API_KEY
       baseURL: process.env.ANTHROPIC_BASE_URL,
     })
   : null;
+
+const AI_CREDIT_LIMIT = 20;
+
+interface StreamField {
+  id: string;
+  type: string;
+  label: string;
+  [key: string]: unknown;
+}
+
+// Check and decrement credits for a user
+async function checkAndDecrementCredits(userId: string): Promise<{ allowed: boolean; error?: string; creditsUsed?: number; limit?: number }> {
+  const dbUser = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+  });
+
+  if (!dbUser) {
+    return { allowed: false, error: "User not found" };
+  }
+
+  // Pro users have unlimited credits
+  if (dbUser.plan === "pro") {
+    return { allowed: true, creditsUsed: dbUser.aiCreditsUsed, limit: -1 };
+  }
+
+  // Check if credits are exhausted
+  if (dbUser.aiCreditsUsed >= AI_CREDIT_LIMIT) {
+    return {
+      allowed: false,
+      error: "AI credits exhausted. Please upgrade to Pro or wait for reset.",
+      creditsUsed: dbUser.aiCreditsUsed,
+      limit: AI_CREDIT_LIMIT,
+    };
+  }
+
+  // Decrement credits
+  await db
+    .update(users)
+    .set({
+      aiCreditsUsed: dbUser.aiCreditsUsed + 1,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, userId));
+
+  return {
+    allowed: true,
+    creditsUsed: dbUser.aiCreditsUsed + 1,
+    limit: AI_CREDIT_LIMIT,
+  };
+}
 
 function extractTextDelta(chunk: any): string | null {
   if (chunk.type === "content_block_delta" && chunk.delta?.type === "text_delta") {
@@ -20,13 +73,6 @@ function extractTextDelta(chunk: any): string | null {
   return null;
 }
 
-interface StreamField {
-  id: string;
-  type: string;
-  label: string;
-  [key: string]: unknown;
-}
-
 // Parse accumulated text to find complete field objects
 function extractCompletedFields(
   accumulatedText: string,
@@ -35,20 +81,12 @@ function extractCompletedFields(
   const fields: StreamField[] = [];
   let newIndex = lastProcessedIndex;
 
-  // Look for field objects: they start with {"id": and end with }
-  // We scan for complete field objects that were added since lastProcessedIndex
-  const fieldPattern = /\{"id":\s*"([^"]+)"[^}]*\}/g;
-  let match;
-
-  // Find the "fields": [ section
   const fieldsStart = accumulatedText.indexOf('"fields":');
   if (fieldsStart === -1 || fieldsStart < lastProcessedIndex) {
     return { fields: [], newIndex };
   }
 
-  // Scan from fieldsStart onwards for complete field objects
   const scanText = accumulatedText.slice(fieldsStart);
-  let currentPos = 0;
   let braceCount = 0;
   let fieldStart = -1;
   let inField = false;
@@ -57,7 +95,6 @@ function extractCompletedFields(
     const char = scanText[i];
 
     if (char === '{' && !inField) {
-      // Check if we're starting a field object
       const remaining = scanText.slice(i, i + 10);
       if (remaining.includes('"id":')) {
         fieldStart = i;
@@ -69,10 +106,8 @@ function extractCompletedFields(
       else if (char === '}') {
         braceCount--;
         if (braceCount === 0 && fieldStart !== -1) {
-          // We have a complete field object
           const fieldStr = scanText.slice(fieldStart, i + 1);
           try {
-            // Only process if this is a NEW complete field (not previously processed)
             const globalFieldStart = fieldsStart + fieldStart;
             if (globalFieldStart >= lastProcessedIndex) {
               const field = JSON.parse(fieldStr) as StreamField;
@@ -96,15 +131,39 @@ function extractCompletedFields(
 
 // GET /api/ai/generate - Generate form from prompt (SSE)
 // Note: Uses GET because EventSource only supports GET
-router.get("/generate", async (req, res) => {
+router.get("/generate", async (req: AuthRequest, res) => {
   const prompt = req.query.prompt as string;
+  const userId = req.user?.id;
+
+  // Return auth error via SSE
+  if (!userId) {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.write(`event: error\ndata: ${JSON.stringify({ error: "Unauthorized" })}\n\n`);
+    res.end();
+    return;
+  }
 
   if (!prompt) {
-    return res.status(400).json({ error: "Prompt is required" });
+    res.status(400).json({ error: "Prompt is required" });
+    return;
   }
 
   if (!client) {
-    return res.status(500).json({ error: "AI service not configured" });
+    res.status(500).json({ error: "AI service not configured" });
+    return;
+  }
+
+  // Check and decrement credits
+  const creditCheck = await checkAndDecrementCredits(userId);
+  if (!creditCheck.allowed) {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.write(`event: error\ndata: ${JSON.stringify({ error: creditCheck.error, credits: { used: creditCheck.creditsUsed, limit: creditCheck.limit } })}\n\n`);
+    res.end();
+    return;
   }
 
   res.setHeader("Content-Type", "text/event-stream");
@@ -138,12 +197,10 @@ Rules:
       if (text) {
         accumulatedText += text;
 
-        // Send raw text for any partial content display
         res.write(
           `event: schema_delta\ndata: ${JSON.stringify({ text })}\n\n`
         );
 
-        // Try to extract completed fields for real-time rendering
         const { fields, newIndex } =
           extractCompletedFields(accumulatedText, lastProcessedFieldIndex);
 
@@ -156,9 +213,7 @@ Rules:
           lastProcessedFieldIndex = newIndex;
         }
 
-        // Send metadata (title, pages) as soon as we have it
         if (!sentInitialMeta) {
-          // Try to extract title and pages from accumulated text
           const titleMatch = accumulatedText.match(/"title":\s*"([^"]*)"/);
           const pagesMatch = accumulatedText.match(/"pages":\s*\[([^\]]*)\]/);
 
@@ -190,15 +245,39 @@ Rules:
 });
 
 // POST /api/ai/modify - Modify existing form (SSE)
-router.post("/modify", async (req, res) => {
+router.post("/modify", async (req: AuthRequest, res) => {
   const { prompt, currentSchema, selectedFieldId } = req.body;
+  const userId = req.user?.id;
+
+  // Return auth error via SSE
+  if (!userId) {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.write(`event: error\ndata: ${JSON.stringify({ error: "Unauthorized" })}\n\n`);
+    res.end();
+    return;
+  }
 
   if (!prompt) {
-    return res.status(400).json({ error: "Prompt is required" });
+    res.status(400).json({ error: "Prompt is required" });
+    return;
   }
 
   if (!client) {
-    return res.status(500).json({ error: "AI service not configured" });
+    res.status(500).json({ error: "AI service not configured" });
+    return;
+  }
+
+  // Check and decrement credits
+  const creditCheck = await checkAndDecrementCredits(userId);
+  if (!creditCheck.allowed) {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.write(`event: error\ndata: ${JSON.stringify({ error: creditCheck.error, credits: { used: creditCheck.creditsUsed, limit: creditCheck.limit } })}\n\n`);
+    res.end();
+    return;
   }
 
   res.setHeader("Content-Type", "text/event-stream");

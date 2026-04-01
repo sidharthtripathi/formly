@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
-const router = Router();
+const router: Router = Router();
 
 const STORAGE_MODE = process.env.STORAGE_MODE || "local";
 

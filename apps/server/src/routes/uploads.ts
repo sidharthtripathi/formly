@@ -3,7 +3,7 @@ import multer from "multer";
 import { uploadFile, deleteFile } from "../services/storage.js";
 import { AuthRequest } from "../middleware/auth.js";
 
-export const uploadsRouter = Router();
+export const uploadsRouter: Router = Router();
 
 // Configure multer for memory storage
 const upload = multer({

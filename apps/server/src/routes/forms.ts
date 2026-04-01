@@ -4,7 +4,7 @@ import { eq, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { AuthRequest } from "../middleware/auth.js";
 
-export const formsRouter = Router();
+export const formsRouter: Router = Router();
 
 // POST /api/forms - Create form
 formsRouter.post("/", async (req: AuthRequest, res) => {

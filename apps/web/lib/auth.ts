@@ -8,7 +8,7 @@ import { users } from "@formly/shared/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
-export const { handlers, signIn, signOut, auth, getSession } = NextAuth({
+export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(db),
   session: { strategy: "jwt" },
   pages: {

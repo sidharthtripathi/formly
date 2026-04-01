@@ -26,9 +26,9 @@ export default function TemplatesPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const handleUseTemplate = async (templateId: string) => {
-    const result = await useTemplate.mutateAsync(templateId);
-    if (result?.data?.id) {
-      router.push(`/builder/${result.data.id}`);
+    const result = await useTemplate.mutateAsync(templateId) as { id: string } | undefined;
+    if (result?.id) {
+      router.push(`/builder/${result.id}`);
     }
   };
 

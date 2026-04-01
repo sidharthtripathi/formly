@@ -17,7 +17,7 @@ export function useFormGeneration(formId: string) {
 
   const generate = useCallback(
     async (prompt: string) => {
-      if (credits && credits.limit === 0) {
+      if (credits && credits.limit !== -1 && credits.used >= credits.limit) {
         setError("AI credits exhausted. Please upgrade to Pro or wait for reset.");
         setMode("manual");
         return;
@@ -68,7 +68,11 @@ export function useFormGeneration(formId: string) {
             const schema = JSON.parse(jsonMatch[0]) as FormSchema;
             setSchema(schema);
             if (formId) {
-              await updateForm.mutateAsync({ formId, schema });
+              try {
+                await updateForm.mutateAsync({ formId, schema });
+              } catch {
+                setError("Failed to save form. Your generated form is still visible above.");
+              }
             }
           }
         } catch {

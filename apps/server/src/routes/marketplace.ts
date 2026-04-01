@@ -3,7 +3,7 @@ import { db, marketplaceListings, marketplaceUpvotes, templates } from "../db/in
 import { eq, desc, and } from "drizzle-orm";
 import { AuthRequest } from "../middleware/auth.js";
 
-export const marketplaceRouter = Router();
+export const marketplaceRouter: Router = Router();
 
 // GET /api/marketplace - List marketplace listings
 marketplaceRouter.get("/", async (req, res) => {
