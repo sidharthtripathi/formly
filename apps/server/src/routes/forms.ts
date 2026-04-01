@@ -39,10 +39,10 @@ formsRouter.get("/", async (req: AuthRequest, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const userForms = await db.query.forms.findMany({
-      where: eq(forms.ownerId, user.id),
-      orderBy: [desc(forms.updatedAt)],
-    });
+    const userForms = await db
+      .select()
+      .from(forms)
+      .where(eq(forms.ownerId, user.id));
 
     return res.json({ data: userForms });
   } catch (error) {
@@ -59,9 +59,11 @@ formsRouter.get("/:id", async (req: AuthRequest, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const form = await db.query.forms.findFirst({
-      where: eq(forms.id, req.params.id),
-    });
+    const [form] = await db
+      .select()
+      .from(forms)
+      .where(eq(forms.id, req.params.id))
+      .limit(1);
 
     if (!form) {
       return res.status(404).json({ error: "Form not found" });
@@ -86,9 +88,11 @@ formsRouter.patch("/:id", async (req: AuthRequest, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const existing = await db.query.forms.findFirst({
-      where: eq(forms.id, req.params.id),
-    });
+    const [existing] = await db
+      .select()
+      .from(forms)
+      .where(eq(forms.id, req.params.id))
+      .limit(1);
 
     if (!existing) {
       return res.status(404).json({ error: "Form not found" });
@@ -124,9 +128,11 @@ formsRouter.delete("/:id", async (req: AuthRequest, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const existing = await db.query.forms.findFirst({
-      where: eq(forms.id, req.params.id),
-    });
+    const [existing] = await db
+      .select()
+      .from(forms)
+      .where(eq(forms.id, req.params.id))
+      .limit(1);
 
     if (!existing) {
       return res.status(404).json({ error: "Form not found" });
@@ -152,9 +158,11 @@ formsRouter.post("/:id/publish", async (req: AuthRequest, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const existing = await db.query.forms.findFirst({
-      where: eq(forms.id, req.params.id),
-    });
+    const [existing] = await db
+      .select()
+      .from(forms)
+      .where(eq(forms.id, req.params.id))
+      .limit(1);
 
     if (!existing) {
       return res.status(404).json({ error: "Form not found" });
@@ -187,9 +195,11 @@ formsRouter.post("/:id/publish", async (req: AuthRequest, res) => {
 // GET /api/forms/public/:slug - Get public form by slug (public, no auth)
 formsRouter.get("/:slug", async (req, res) => {
   try {
-    const form = await db.query.forms.findFirst({
-      where: eq(forms.publicSlug, req.params.slug),
-    });
+    const [form] = await db
+      .select()
+      .from(forms)
+      .where(eq(forms.publicSlug, req.params.slug))
+      .limit(1);
 
     if (!form) {
       return res.status(404).json({ error: "Form not found" });

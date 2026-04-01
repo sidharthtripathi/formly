@@ -24,9 +24,8 @@ interface StreamField {
 
 // Check and decrement credits for a user
 async function checkAndDecrementCredits(userId: string): Promise<{ allowed: boolean; error?: string; creditsUsed?: number; limit?: number }> {
-  const dbUser = await db.query.users.findFirst({
-    where: eq(users.id, userId),
-  });
+  const dbUserResult = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  const dbUser = dbUserResult[0];
 
   if (!dbUser) {
     return { allowed: false, error: "User not found" };

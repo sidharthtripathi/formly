@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { db, users } from "../db/index.js";
 import { eq } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
 export interface AuthUser {
   id: string;
@@ -36,16 +37,19 @@ export async function validateUser(userId: string | undefined, req: AuthRequest)
   if (!userId) return false;
 
   try {
-    const dbUser = await db.query.users.findFirst({
-      where: eq(users.id, userId),
-    });
+    // Use select() instead of query API since query API requires relations setup
+    const dbUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
 
-    if (dbUser) {
+    if (dbUser && dbUser[0]) {
       req.user = {
-        id: dbUser.id,
-        email: dbUser.email,
-        name: dbUser.name ?? undefined,
-        avatarUrl: dbUser.avatarUrl ?? undefined,
+        id: dbUser[0].id,
+        email: dbUser[0].email,
+        name: dbUser[0].name ?? undefined,
+        avatarUrl: dbUser[0].avatarUrl ?? undefined,
       };
       return true;
     }

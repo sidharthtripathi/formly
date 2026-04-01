@@ -132,9 +132,10 @@ router.get("/", async (req: AuthRequest, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const userWebhooks = await db.query.webhooks.findMany({
-      where: eq(webhooks.ownerId, user.id),
-    });
+    const userWebhooks = await db
+      .select()
+      .from(webhooks)
+      .where(eq(webhooks.ownerId, user.id));
 
     return res.json({ data: userWebhooks });
   } catch (error) {
@@ -184,9 +185,11 @@ router.delete("/:id", async (req: AuthRequest, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const existing = await db.query.webhooks.findFirst({
-      where: eq(webhooks.id, req.params.id),
-    });
+    const [existing] = await db
+      .select()
+      .from(webhooks)
+      .where(eq(webhooks.id, req.params.id))
+      .limit(1);
 
     if (!existing) {
       return res.status(404).json({ error: "Webhook not found" });
@@ -212,9 +215,11 @@ router.post("/:id/test", async (req: AuthRequest, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const webhook = await db.query.webhooks.findFirst({
-      where: eq(webhooks.id, req.params.id),
-    });
+    const [webhook] = await db
+      .select()
+      .from(webhooks)
+      .where(eq(webhooks.id, req.params.id))
+      .limit(1);
 
     if (!webhook) {
       return res.status(404).json({ error: "Webhook not found" });

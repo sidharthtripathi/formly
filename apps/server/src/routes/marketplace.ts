@@ -42,10 +42,10 @@ marketplaceRouter.get("/", async (req, res) => {
   try {
     const { category, sort = "upvotes", q } = req.query as { category?: string; sort?: string; q?: string };
 
-    let listings = await db.query.marketplaceListings.findMany({
-      orderBy: [desc(marketplaceListings.upvoteCount)],
-      limit: 50,
-    });
+    let listings = await db
+      .select()
+      .from(marketplaceListings)
+      .limit(50);
 
     // Filter by category if provided
     if (category) {
@@ -117,9 +117,11 @@ marketplaceRouter.delete("/:id", async (req: AuthRequest, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const listing = await db.query.marketplaceListings.findFirst({
-      where: eq(marketplaceListings.id, req.params.id),
-    });
+    const [listing] = await db
+      .select()
+      .from(marketplaceListings)
+      .where(eq(marketplaceListings.id, req.params.id))
+      .limit(1);
 
     if (!listing) {
       return res.status(404).json({ error: "Listing not found" });
@@ -145,21 +147,27 @@ marketplaceRouter.post("/:id/upvote", async (req: AuthRequest, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const listing = await db.query.marketplaceListings.findFirst({
-      where: eq(marketplaceListings.id, req.params.id),
-    });
+    const [listing] = await db
+      .select()
+      .from(marketplaceListings)
+      .where(eq(marketplaceListings.id, req.params.id))
+      .limit(1);
 
     if (!listing) {
       return res.status(404).json({ error: "Listing not found" });
     }
 
     // Check if already upvoted
-    const existing = await db.query.marketplaceUpvotes.findFirst({
-      where: and(
-        eq(marketplaceUpvotes.userId, user.id),
-        eq(marketplaceUpvotes.listingId, req.params.id)
-      ),
-    });
+    const [existing] = await db
+      .select()
+      .from(marketplaceUpvotes)
+      .where(
+        and(
+          eq(marketplaceUpvotes.userId, user.id),
+          eq(marketplaceUpvotes.listingId, req.params.id)
+        )
+      )
+      .limit(1);
 
     if (existing) {
       // Remove upvote and decrement count
@@ -206,17 +214,21 @@ marketplaceRouter.post("/:id/copy", async (req: AuthRequest, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const listing = await db.query.marketplaceListings.findFirst({
-      where: eq(marketplaceListings.id, req.params.id),
-    });
+    const [listing] = await db
+      .select()
+      .from(marketplaceListings)
+      .where(eq(marketplaceListings.id, req.params.id))
+      .limit(1);
 
     if (!listing) {
       return res.status(404).json({ error: "Listing not found" });
     }
 
-    const template = await db.query.templates.findFirst({
-      where: eq(templates.id, listing.templateId),
-    });
+    const [template] = await db
+      .select()
+      .from(templates)
+      .where(eq(templates.id, listing.templateId))
+      .limit(1);
 
     if (!template) {
       return res.status(404).json({ error: "Template not found" });

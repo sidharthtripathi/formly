@@ -13,9 +13,8 @@ usersRouter.get("/me", async (req: AuthRequest, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const dbUser = await db.query.users.findFirst({
-      where: eq(users.id, user.id),
-    });
+    const dbUserResult = await db.select().from(users).where(eq(users.id, user.id)).limit(1);
+    const dbUser = dbUserResult[0];
 
     if (!dbUser) {
       return res.status(404).json({ error: "User not found" });
@@ -45,9 +44,8 @@ usersRouter.get("/me/credits", async (req: AuthRequest, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const dbUser = await db.query.users.findFirst({
-      where: eq(users.id, user.id),
-    });
+    const dbUserResult = await db.select().from(users).where(eq(users.id, user.id)).limit(1);
+    const dbUser = dbUserResult[0];
 
     if (!dbUser) {
       return res.status(404).json({ error: "User not found" });

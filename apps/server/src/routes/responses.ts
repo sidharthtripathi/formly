@@ -15,9 +15,11 @@ responsesRouter.post("/", async (req: Request<{ id: string }>, res) => {
       return res.status(400).json({ error: "Form ID required" });
     }
 
-    const form = await db.query.forms.findFirst({
-      where: eq(forms.id, formId),
-    });
+    const [form] = await db
+      .select()
+      .from(forms)
+      .where(eq(forms.id, formId))
+      .limit(1);
 
     if (!form || !form.isPublished) {
       return res.status(404).json({ error: "Form not found or not published" });
@@ -57,9 +59,11 @@ responsesRouter.get("/", async (req: AuthRequest, res) => {
       return res.status(400).json({ error: "Form ID required" });
     }
 
-    const form = await db.query.forms.findFirst({
-      where: eq(forms.id, formId),
-    });
+    const [form] = await db
+      .select()
+      .from(forms)
+      .where(eq(forms.id, formId))
+      .limit(1);
 
     if (!form) {
       return res.status(404).json({ error: "Form not found" });
@@ -77,12 +81,12 @@ responsesRouter.get("/", async (req: AuthRequest, res) => {
     const limit = 20;
     const offset = (page - 1) * limit;
 
-    const formResponses = await db.query.responses.findMany({
-      where: eq(responses.formId, formId),
-      orderBy: [desc(responses.submittedAt)],
-      limit,
-      offset,
-    });
+    const formResponses = await db
+      .select()
+      .from(responses)
+      .where(eq(responses.formId, formId))
+      .limit(limit)
+      .offset(offset);
 
     return res.json({ data: formResponses, page, limit });
   } catch (error) {
@@ -104,9 +108,11 @@ responsesRouter.get("/export", async (req: AuthRequest, res) => {
       return res.status(400).json({ error: "Form ID required" });
     }
 
-    const form = await db.query.forms.findFirst({
-      where: eq(forms.id, formId),
-    });
+    const [form] = await db
+      .select()
+      .from(forms)
+      .where(eq(forms.id, formId))
+      .limit(1);
 
     if (!form) {
       return res.status(404).json({ error: "Form not found" });
@@ -116,10 +122,10 @@ responsesRouter.get("/export", async (req: AuthRequest, res) => {
       return res.status(403).json({ error: "Forbidden" });
     }
 
-    const formResponses = await db.query.responses.findMany({
-      where: eq(responses.formId, formId),
-      orderBy: [desc(responses.submittedAt)],
-    });
+    const formResponses = await db
+      .select()
+      .from(responses)
+      .where(eq(responses.formId, formId));
 
     const schemaFields = (form.schema as Record<string, unknown>)?.fields as Array<{ id: string; label: string }> || [];
     const headers = ["Submitted At", ...schemaFields.map((f) => f.label)];

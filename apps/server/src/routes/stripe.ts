@@ -28,9 +28,11 @@ router.post("/create-checkout", async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const dbUser = await db.query.users.findFirst({
-      where: eq(users.id, user.id),
-    });
+    const [dbUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, user.id))
+      .limit(1);
 
     if (!dbUser?.stripeCustomerId) {
       return res.status(400).json({ error: "No Stripe customer found" });
@@ -69,9 +71,11 @@ router.post("/portal", async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const dbUser = await db.query.users.findFirst({
-      where: eq(users.id, user.id),
-    });
+    const [dbUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, user.id))
+      .limit(1);
 
     if (!dbUser?.stripeCustomerId) {
       return res.status(400).json({ error: "No Stripe customer found" });
@@ -144,9 +148,11 @@ router.post("/", async (req: Request, res: Response) => {
           const customerId = session.customer as string;
           const subscription = await stripeClient.subscriptions.retrieve(session.subscription as string);
 
-          const user = await db.query.users.findFirst({
-            where: eq(users.stripeCustomerId, customerId)
-          });
+          const [user] = await db
+            .select()
+            .from(users)
+            .where(eq(users.stripeCustomerId, customerId))
+            .limit(1);
 
           if (!user) {
             console.error("Webhook: User not found for customer:", customerId);
@@ -154,9 +160,11 @@ router.post("/", async (req: Request, res: Response) => {
           }
 
           // Upsert subscription - update if exists, insert if not
-          const existingSub = await db.query.subscriptions.findFirst({
-            where: eq(subscriptions.stripeSubscriptionId, subscription.id)
-          });
+          const [existingSub] = await db
+              .select()
+              .from(subscriptions)
+              .where(eq(subscriptions.stripeSubscriptionId, subscription.id))
+              .limit(1);
 
           if (existingSub) {
             await db

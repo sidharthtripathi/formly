@@ -13,9 +13,10 @@ templatesRouter.get("/", async (req: AuthRequest, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const userTemplates = await db.query.templates.findMany({
-      where: eq(templates.ownerId, user.id),
-    });
+    const userTemplates = await db
+      .select()
+      .from(templates)
+      .where(eq(templates.ownerId, user.id));
 
     return res.json({ data: userTemplates });
   } catch (error) {
@@ -58,9 +59,11 @@ templatesRouter.delete("/:id", async (req: AuthRequest, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const existing = await db.query.templates.findFirst({
-      where: eq(templates.id, req.params.id),
-    });
+    const [existing] = await db
+      .select()
+      .from(templates)
+      .where(eq(templates.id, req.params.id))
+      .limit(1);
 
     if (!existing) {
       return res.status(404).json({ error: "Template not found" });
@@ -86,9 +89,11 @@ templatesRouter.post("/:id/use", async (req: AuthRequest, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const template = await db.query.templates.findFirst({
-      where: eq(templates.id, req.params.id),
-    });
+    const [template] = await db
+      .select()
+      .from(templates)
+      .where(eq(templates.id, req.params.id))
+      .limit(1);
 
     if (!template) {
       return res.status(404).json({ error: "Template not found" });
