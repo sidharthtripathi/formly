@@ -2,10 +2,42 @@ import { Router } from "express";
 import { db, marketplaceListings, marketplaceUpvotes, templates } from "../db/index.js";
 import { eq, desc, and } from "drizzle-orm";
 import { AuthRequest } from "../middleware/auth.js";
+import jwt from "jsonwebtoken";
+import { validateUser } from "../middleware/auth.js";
 
 export const marketplaceRouter: Router = Router();
 
-// GET /api/marketplace - List marketplace listings
+// Helper to get optional user from request (for public routes)
+async function getOptionalUser(req: AuthRequest): Promise<AuthRequest["user"] | undefined> {
+  // Try X-User-Id header first (set by proxy)
+  const userId = req.headers["x-user-id"] as string | undefined;
+  if (userId && await validateUser(userId, req)) {
+    return req.user;
+  }
+  // Try Bearer token
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.slice(7);
+    const authSecret = process.env.AUTH_SECRET;
+    if (authSecret) {
+      try {
+        const decoded = jwt.verify(token, authSecret) as { id: string; email: string };
+        if (decoded.id && await validateUser(decoded.id, req)) {
+          return req.user;
+        }
+      } catch {}
+    }
+  }
+  return undefined;
+}
+
+// Helper to require auth for protected routes
+async function requireAuth(req: AuthRequest): Promise<AuthRequest["user"] | null> {
+  const user = await getOptionalUser(req);
+  return user || null;
+}
+
+// GET /api/marketplace - List marketplace listings (public)
 marketplaceRouter.get("/", async (req, res) => {
   try {
     const { category, sort = "upvotes", q } = req.query as { category?: string; sort?: string; q?: string };
@@ -40,7 +72,7 @@ marketplaceRouter.get("/", async (req, res) => {
 // POST /api/marketplace - Create marketplace listing
 marketplaceRouter.post("/", async (req: AuthRequest, res) => {
   try {
-    const user = req.user;
+    const user = await requireAuth(req);
     if (!user) {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -80,7 +112,7 @@ marketplaceRouter.post("/", async (req: AuthRequest, res) => {
 // DELETE /api/marketplace/:id - Delete listing
 marketplaceRouter.delete("/:id", async (req: AuthRequest, res) => {
   try {
-    const user = req.user;
+    const user = await requireAuth(req);
     if (!user) {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -108,7 +140,7 @@ marketplaceRouter.delete("/:id", async (req: AuthRequest, res) => {
 // POST /api/marketplace/:id/upvote - Toggle upvote
 marketplaceRouter.post("/:id/upvote", async (req: AuthRequest, res) => {
   try {
-    const user = req.user;
+    const user = await requireAuth(req);
     if (!user) {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -169,7 +201,7 @@ marketplaceRouter.post("/:id/upvote", async (req: AuthRequest, res) => {
 // POST /api/marketplace/:id/copy - Copy template
 marketplaceRouter.post("/:id/copy", async (req: AuthRequest, res) => {
   try {
-    const user = req.user;
+    const user = await requireAuth(req);
     if (!user) {
       return res.status(401).json({ error: "Unauthorized" });
     }

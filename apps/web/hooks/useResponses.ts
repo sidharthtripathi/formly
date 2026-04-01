@@ -56,6 +56,8 @@ export function useSubmitResponse() {
 export function useExportResponses() {
   return useMutation({
     mutationFn: async (formId: string) => {
+      // Direct fetch to API - the browser cookie will be sent automatically
+      // and the Express server will validate the JWT from the cookie
       const response = await fetch(`${API_URL}/api/forms/${formId}/responses/export`, {
         credentials: "include",
       });

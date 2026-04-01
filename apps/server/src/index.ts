@@ -66,7 +66,7 @@ app.use("/api/ai", authMiddleware, aiRouter);
 // Protected API routes (auth required)
 app.use("/api/forms", authMiddleware, formsRouter);
 app.use("/api/templates", authMiddleware, templatesRouter);
-app.use("/api/marketplace", authMiddleware, marketplaceRouter);
+app.use("/api/marketplace", marketplaceRouter); // auth handled in route handlers
 app.use("/api/users", authMiddleware, usersRouter);
 app.use("/api/uploads", authMiddleware, uploadsRouter);
 app.use("/api/webhooks", authMiddleware, webhooksRouter);

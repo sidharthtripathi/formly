@@ -32,7 +32,7 @@ function isPublicPath(pathname: string): boolean {
 }
 
 // Validate user and attach to request
-async function validateUser(userId: string | undefined, req: AuthRequest): Promise<boolean> {
+export async function validateUser(userId: string | undefined, req: AuthRequest): Promise<boolean> {
   if (!userId) return false;
 
   try {
