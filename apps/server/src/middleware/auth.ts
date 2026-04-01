@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { db, users } from "../db/index.js";
+import { db } from "../db/index.js";
+import { users } from "@formly/shared/db/schema.js";
 import { eq } from "drizzle-orm";
-import { sql } from "drizzle-orm";
 
 export interface AuthUser {
   id: string;

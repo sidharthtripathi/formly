@@ -1,6 +1,7 @@
 import { Router } from "express";
 import Anthropic from "@anthropic-ai/sdk";
-import { db, users } from "../db/index.js";
+import { db } from "../db/index.js";
+import { users } from "@formly/shared/db/schema.js";
 import { eq } from "drizzle-orm";
 import { AuthRequest } from "../middleware/auth.js";
 
