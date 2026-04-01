@@ -51,7 +51,7 @@ export function Sidebar() {
   const { data: user } = useUser();
   const deleteForm = useDeleteForm();
   const [open, setOpen] = useState(true);
-  const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
     <>
@@ -76,8 +76,8 @@ export function Sidebar() {
         <motion.aside
           initial={false}
           animate={{
-            width: isCollapsed ? 0 : 280,
-            opacity: isCollapsed ? 0 : 1,
+            width: isCollapsed ? 72 : 280,
+            opacity: 1,
           }}
           transition={{ duration: 0.3, ease: "easeInOut" }}
           className={cn(
@@ -87,33 +87,47 @@ export function Sidebar() {
         >
           <div className="flex flex-col h-full w-[280px]">
             {/* Header */}
-            <div className="p-4 border-b">
-              <Link
-                href="/"
-                className="flex items-center gap-2 font-bold text-lg hover:text-primary transition-colors"
-              >
-                <Sparkles className="w-5 h-5" />
-                <span>Formly</span>
-              </Link>
+            <div className={cn("p-4 border-b", isCollapsed && "p-2 flex flex-col items-center gap-3")}>
+              {isCollapsed ? (
+                <>
+                  <Link href="/" className="p-2 hover:bg-muted rounded-md transition-colors">
+                    <Sparkles className="w-5 h-5" />
+                  </Link>
+                  <Link href="/builder/new" className="p-2 hover:bg-muted rounded-md transition-colors">
+                    <Plus className="w-5 h-5" />
+                  </Link>
+                </>
+              ) : (
+                <Link
+                  href="/"
+                  className="flex items-center gap-2 font-bold text-lg hover:text-primary transition-colors"
+                >
+                  <Sparkles className="w-5 h-5" />
+                  <span>Formly</span>
+                </Link>
+              )}
             </div>
 
             {/* New Form Button */}
-            <div className="p-3">
-              <Button asChild className="w-full" size="sm">
-                <Link href="/builder/new">
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Form
-                </Link>
-              </Button>
-            </div>
+            {!isCollapsed && (
+              <div className="p-3">
+                <Button asChild className="w-full" size="sm">
+                  <Link href="/builder/new">
+                    <Plus className="w-4 h-4 mr-2" />
+                    New Form
+                  </Link>
+                </Button>
+              </div>
+            )}
 
             {/* Forms List */}
-            <div className="flex-1 overflow-auto">
-              <div className="p-2">
-                <h3 className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                  <LayoutDashboard className="w-3 h-3" />
-                  My Forms
-                </h3>
+            {!isCollapsed && (
+              <div className="flex-1 overflow-auto">
+                <div className="p-2">
+                  <h3 className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                    <LayoutDashboard className="w-3 h-3" />
+                    My Forms
+                  </h3>
 
                 {isLoading && (
                   <div className="space-y-2 p-3">
@@ -160,12 +174,13 @@ export function Sidebar() {
                 </motion.div>
               </div>
             </div>
+            )}
 
             {/* User Section */}
-            <div className="p-4 border-t">
+            <div className={cn("border-t", isCollapsed ? "p-2 flex flex-col items-center gap-3" : "p-4")}>
               {user ? (
-                <div className="flex items-center gap-3">
-                  <div className="flex-shrink-0">
+                isCollapsed ? (
+                  <div className="flex flex-col items-center gap-2">
                     {user.avatarUrl ? (
                       <img
                         src={user.avatarUrl}
@@ -177,49 +192,78 @@ export function Sidebar() {
                         <UserIcon className="w-5 h-5 text-primary" />
                       </div>
                     )}
+                    <button
+                      onClick={() => signOut({ callbackUrl: "/login" })}
+                      className="p-2 rounded-md hover:bg-muted transition-colors"
+                      title="Sign out"
+                    >
+                      <LogOut className="w-4 h-4 text-muted-foreground" />
+                    </button>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {user.name || "User"}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {user.email}
-                    </p>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      {user.avatarUrl ? (
+                        <img
+                          src={user.avatarUrl}
+                          alt={user.name || "User"}
+                          className="w-9 h-9 rounded-full"
+                        />
+                      ) : (
+                        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                          <UserIcon className="w-5 h-5 text-primary" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {user.name || "User"}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {user.email}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => signOut({ callbackUrl: "/login" })}
+                      className="p-2 rounded-md hover:bg-muted transition-colors"
+                      title="Sign out"
+                    >
+                      <LogOut className="w-4 h-4 text-muted-foreground" />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => signOut({ callbackUrl: "/login" })}
-                    className="p-2 rounded-md hover:bg-muted transition-colors"
-                    title="Sign out"
-                  >
-                    <LogOut className="w-4 h-4 text-muted-foreground" />
-                  </button>
-                </div>
+                )
               ) : (
-                <div className="flex items-center gap-3">
+                isCollapsed ? (
                   <div className="w-9 h-9 rounded-full bg-muted animate-pulse" />
-                  <div className="flex-1 space-y-1">
-                    <div className="h-3 w-20 bg-muted rounded animate-pulse" />
-                    <div className="h-2 w-28 bg-muted rounded animate-pulse" />
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-muted animate-pulse" />
+                    <div className="flex-1 space-y-1">
+                      <div className="h-3 w-20 bg-muted rounded animate-pulse" />
+                      <div className="h-2 w-28 bg-muted rounded animate-pulse" />
+                    </div>
                   </div>
-                </div>
+                )
               )}
 
-              <div className="mt-3 space-y-1">
-                <Link
-                  href="/templates"
-                  className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors"
-                >
-                  <Save className="w-4 h-4" />
-                  My Templates
-                </Link>
-                <Link
-                  href="/marketplace"
-                  className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors"
-                >
-                  <Store className="w-4 h-4" />
-                  Marketplace
-                </Link>
-              </div>
+              {!isCollapsed && (
+                <div className="mt-3 space-y-1">
+                  <Link
+                    href="/templates"
+                    className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors"
+                  >
+                    <Save className="w-4 h-4" />
+                    My Templates
+                  </Link>
+                  <Link
+                    href="/marketplace"
+                    className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors"
+                  >
+                    <Store className="w-4 h-4" />
+                    Marketplace
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </motion.aside>
