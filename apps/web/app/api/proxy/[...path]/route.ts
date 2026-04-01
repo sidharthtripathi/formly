@@ -1,5 +1,5 @@
-import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -7,25 +7,29 @@ async function proxyRequest(
   request: NextRequest,
   method: string
 ): Promise<NextResponse> {
-  // Use NextAuth v5's auth() function for server-side auth
-  const session = await auth();
+  // Use getToken at Edge Runtime for auth
+  const token = await getToken({
+    req: request,
+    secret: process.env.AUTH_SECRET,
+  });
 
-  if (!session?.user?.id) {
-    console.error("Proxy auth failed - no valid session:", session);
+  if (!token?.id) {
+    console.error("Proxy auth failed - no valid token:", token);
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Get the path from the URL
+  // Get the path from the URL - everything after /api/proxy/
   const url = new URL(request.url);
   const pathParts = url.pathname.split("/").filter(Boolean);
 
-  // Find where "proxy" is and get everything after it
+  // Find where "proxy" is and get everything after it (including /api prefix)
   const proxyIndex = pathParts.indexOf("proxy");
-  const path = pathParts.slice(proxyIndex + 1).join("/");
+  // Keep the /api prefix by including everything after proxy, not removing it
+  const path = "/" + pathParts.slice(proxyIndex + 1).join("/");
   const queryString = url.search;
 
   const headers: Record<string, string> = {
-    "X-User-Id": session.user.id,
+    "X-User-Id": token.id as string,
     "Content-Type": "application/json",
   };
 
@@ -34,7 +38,7 @@ async function proxyRequest(
     body = JSON.stringify(await request.json());
   }
 
-  const response = await fetch(`${API_URL}/${path}${queryString}`, {
+  const response = await fetch(`${API_URL}/api${path}${queryString}`, {
     method,
     headers,
     body,
