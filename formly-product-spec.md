@@ -147,11 +147,11 @@ Formly must support all standard field types the AI can generate and the user ca
 │                      Turborepo Monorepo                   │
 │                                                          │
 │  ┌─────────────────┐       ┌──────────────────────────┐  │
-│  │  apps/web        │       │  server/                   │  │
+│  │  apps/web        │       │  apps/server              │  │
 │  │  Next.js 15      │◄─────►│  Express + Node.js         │  │
 │  │  App Router      │  HTTP │  REST + SSE               │  │
 │  │  NextAuth.js v5  │       │  Anthropic SDK (MiniMax)  │  │
-│  │  shadcn/ui (v1)  │       │  JWT auth middleware      │  │
+│  │  shadcn/ui        │       │  JWT auth middleware      │  │
 │  └─────────────────┘       └──────────┬───────────────┘  │
 │                                        │                   │
 │  ┌─────────────────┐       ┌──────────▼───────────────┐  │
@@ -168,7 +168,7 @@ Formly must support all standard field types the AI can generate and the user ca
 | Concern | Technology | Reason |
 |---------|-----------|--------|
 | Frontend | Next.js 15 (App Router) | Server components, streaming, Vercel-native |
-| UI Components | shadcn/ui v1 (pure defaults) | Accessible, composable, no custom Tailwind |
+| UI Components | shadcn/ui | Accessible, composable, Radix UI based |
 | Animations | Framer Motion | Smooth split-editor transitions, AI streaming |
 | Server State | TanStack Query (React Query) v5 | Caching, optimistic updates, SSE hooks |
 | Client State | Zustand | Lightweight, no boilerplate (replaces Recoil) |
@@ -188,37 +188,64 @@ Formly must support all standard field types the AI can generate and the user ca
 ```
 formly/
 ├── apps/
-│   └── web/                          # Next.js 15 frontend
-│       ├── app/
-│       │   ├── (auth)/
-│       │   │   ├── login/            # Login page (Google OAuth + email/password)
-│       │   │   └── signup/           # Signup page (Google OAuth + email/password)
-│       │   ├── (dashboard)/
-│       │   │   ├── page.tsx          # Home screen (prompt box)
-│       │   │   ├── builder/
-│       │   │   │   └── [formId]/     # Split-editor builder
-│       │   │   ├── templates/        # Personal saved templates
-│       │   │   ├── marketplace/      # Public template marketplace
-│       │   │   └── forms/
-│       │   │       └── [formId]/
-│       │   │           ├── responses/  # Response viewer
-│       │   │           └── analytics/  # AI analysis chat
-│       │   ├── f/
-│       │   │   └── [publicSlug]/     # Public form filler (no auth wrapper)
-│       │   └── api/
-│       │       └── auth/             # NextAuth.js v5 route handlers
-│       ├── components/
-│       │   ├── ui/                   # shadcn components (pure defaults)
-│       │   ├── builder/              # Editor-specific components
-│       │   ├── filler/               # Form filling components
-│       │   ├── marketplace/
-│       │   └── analytics/
-│       ├── hooks/                    # Custom React hooks
-│       ├── lib/
-│       │   ├── auth.ts               # NextAuth.js v5 config
-│       │   ├── api-helpers.ts        # authedFetch helper
-│       │   └── db.ts                 # Database connection
-│       └── stores/                   # Zustand stores
+│   ├── web/                         # Next.js 15 frontend
+│   │   ├── app/
+│   │   │   ├── (auth)/
+│   │   │   │   ├── login/            # Login page (Google OAuth + email/password)
+│   │   │   │   └── signup/           # Signup page (Google OAuth + email/password)
+│   │   │   ├── (dashboard)/
+│   │   │   │   ├── page.tsx          # Home screen (prompt box)
+│   │   │   │   ├── builder/
+│   │   │   │   │   └── [formId]/     # Split-editor builder
+│   │   │   │   ├── templates/        # Personal saved templates
+│   │   │   │   ├── marketplace/      # Public template marketplace
+│   │   │   │   └── forms/
+│   │   │   │       └── [formId]/
+│   │   │   │           ├── responses/  # Response viewer
+│   │   │   │           └── analytics/  # AI analysis chat
+│   │   │   ├── f/
+│   │   │   │   └── [publicSlug]/     # Public form filler (no auth wrapper)
+│   │   │   └── api/
+│   │   │       ├── auth/             # NextAuth.js v5 route handlers
+│   │   │       └── proxy/            # Proxy to Express API
+│   │   ├── components/
+│   │   │   ├── ui/                   # shadcn/ui components
+│   │   │   ├── builder/              # Editor-specific components
+│   │   │   ├── filler/               # Form filling components
+│   │   │   ├── marketplace/
+│   │   │   └── analytics/
+│   │   ├── hooks/                    # Custom React hooks
+│   │   ├── lib/
+│   │   │   ├── auth.ts               # NextAuth.js v5 config
+│   │   │   ├── api-client.ts         # Typed API client for Express backend
+│   │   │   └── db.ts                 # Database connection
+│   │   └── stores/                   # Zustand stores
+│   │
+│   ├── server/                       # Express API server
+│   │   ├── src/
+│   │   │   ├── index.ts              # App entry point
+│   │   │   ├── routes/
+│   │   │   │   ├── forms.ts
+│   │   │   │   ├── ai.ts             # AI streaming endpoints (SSE)
+│   │   │   │   ├── responses.ts
+│   │   │   │   ├── templates.ts
+│   │   │   │   ├── marketplace.ts
+│   │   │   │   ├── users.ts
+│   │   │   │   ├── stripe.ts
+│   │   │   │   ├── uploads.ts        # File upload (local or S3)
+│   │   │   │   ├── webhooks.ts       # Webhook delivery with SSRF protection
+│   │   │   │   └── static.ts         # Local file serving
+│   │   │   ├── middleware/
+│   │   │   │   ├── auth.ts           # JWT + X-User-Id validation
+│   │   │   │   └── rate-limit.ts
+│   │   │   ├── services/
+│   │   │   │   └── storage.ts        # Unified storage (local/S3)
+│   │   │   └── db/
+│   │   │       └── index.ts          # DB connection
+│   │   ├── drizzle.config.ts
+│   │   └── Dockerfile
+│   │
+│   └── api/                         # Placeholder (not currently used)
 │
 ├── packages/
 │   └── shared/
@@ -228,33 +255,12 @@ formly/
 │           ├── form-schema.ts        # The canonical FormSchema type
 │           └── api.ts                # Shared API types
 │
-├── server/                           # Express API server
-│   ├── src/
-│   │   ├── index.ts                  # App entry point
-│   │   ├── routes/
-│   │   │   ├── forms.ts
-│   │   │   ├── ai.ts                 # AI streaming endpoints (SSE)
-│   │   │   ├── responses.ts
-│   │   │   ├── templates.ts
-│   │   │   ├── marketplace.ts
-│   │   │   ├── users.ts
-│   │   │   ├── stripe.ts
-│   │   │   ├── uploads.ts            # File upload (local or S3)
-│   │   │   ├── webhooks.ts           # Webhook delivery with SSRF protection
-│   │   │   └── static.ts             # Local file serving
-│   │   ├── middleware/
-│   │   │   ├── auth.ts               # JWT + X-User-Id validation
-│   │   │   └── rate-limit.ts
-│   │   ├── services/
-│   │   │   └── storage.ts            # Unified storage (local/S3)
-│   │   └── db/
-│   │       └── index.ts              # DB connection
-│   └── drizzle.config.ts
-│
-├── docker-compose.yml
-├── docker-compose.prod.yml
+├── docker-compose.yml               # Development: PostgreSQL only
+├── docker-compose.prod.yml          # Production: web + server + postgres
+├── docker-compose.deploy.yml        # Deployment variant
+├── Dockerfile                       # Multi-stage build for both apps
 ├── turbo.json
-├── package.json                      # Root workspace config (bun)
+├── package.json                     # Root workspace config (bun)
 └── .env.example
 ```
 
@@ -371,18 +377,6 @@ CREATE TABLE webhooks (
   secret TEXT,
   form_id UUID,                     -- NULL = all forms
   is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Form Themes / Branding (V2)
-CREATE TABLE form_themes (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_id UUID NOT NULL,
-  name TEXT NOT NULL,
-  colors JSONB,                     -- { primary, background, text, border }
-  logo_url TEXT,
-  font_family TEXT,
-  custom_css TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -1324,7 +1318,6 @@ export function useFormGeneration(formId: string) {
 | Multi-page forms | ✅ | ✅ |
 | Conditional logic | ✅ | ✅ |
 | File uploads | ❌ | ✅ |
-| Remove "Made with Formly" branding | ❌ | ✅ |
 
 > **Key principle:** Free users are **never blocked from editing their forms**. When AI credits (20/month) are exhausted, the builder automatically switches to Manual Mode so the creator retains full control over their forms at all times. AI Assist is a productivity accelerator, not a gate on core functionality.
 
@@ -1498,71 +1491,96 @@ components/
 
 ## 12. Deployment
 
-### Docker Compose (Self-hosted / Local Dev)
+### Docker Compose
 
-**Storage:** Uses `uploads_data` Docker volume for local file storage (when `STORAGE_MODE=local`). Mount a bind path for production.
-
+**Development (`docker-compose.yml`):** Starts PostgreSQL only for local development.
 ```yaml
-# docker-compose.yml
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: formly
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+```
+
+**Production (`docker-compose.prod.yml`):** Full stack with web, server, and postgres.
+```yaml
 services:
   web:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
-    ports:
-      - "3000:3000"
+    restart: unless-stopped
     env_file: .env
     depends_on:
       - server
       - postgres
-    volumes:
-      - uploads_data:/app/uploads  # Local upload storage
+    networks:
+      - formly
 
   server:
     build:
       context: .
-      dockerfile: server/Dockerfile
-    ports:
-      - "3001:3001"
+      dockerfile: apps/server/Dockerfile
+    restart: unless-stopped
     env_file: .env
     depends_on:
       - postgres
-    volumes:
-      - uploads_data:/app/uploads  # Local upload storage
+    networks:
+      - formly
 
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: formly
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-formlypassword}
       POSTGRES_DB: formly
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-
-volumes:
-  postgres_data:
-  uploads_data:  # Named volume for local file uploads
+    networks:
+      - formly
 ```
 
+### Multi-Stage Dockerfile (Root)
+
+The root `Dockerfile` builds both `apps/web` and `apps/server` using Turbo:
+
 ```dockerfile
-# server/Dockerfile
-FROM node:20-alpine AS base
+# Multi-stage build for both apps
+FROM oven/bun:1 AS builder
 WORKDIR /app
-COPY package.json bun.lockb ./
-COPY server/package.json server/
+COPY package.json bun.lockb* ./
+COPY apps/web/package.json apps/web/
+COPY apps/server/package.json apps/server/
 COPY packages/shared/package.json packages/shared/
 RUN bun install --frozen-lockfile
 COPY . .
-CMD ["bun", "run", "server/src/index.ts"]
+RUN bun run build
+
+# Web runtime stage
+FROM oven/bun:1 AS web
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/web/.next ./.next
+COPY --from=builder /app/apps/web/public ./public
+CMD ["next", "start"]
+
+# Server runtime stage
+FROM oven/bun:1 AS server
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/server/dist ./dist
+CMD ["bun", "run", "dist/index.js"]
 ```
 
 ### Vercel Deployment
 
 - `apps/web` → Vercel project (Next.js)
-- `server` → Railway or fly.io (Node.js, Express with Docker)
+- `apps/server` → Railway or fly.io (Node.js, Express with Docker)
 - PostgreSQL → Neon (managed Postgres) or self-hosted on Railway
 
 > **Recommendation:** Deploy Express API to **Railway** (Docker-based, persistent). Deploy Next.js to **Vercel**. Use **Neon** for managed PostgreSQL.
@@ -1714,7 +1732,6 @@ The following 12 quick-start templates should be pre-built and seeded in the dat
 - ✅ Payment field type (Stripe Elements embedded in forms)
 - ✅ Webhooks — notify external URLs on form submission
 - ✅ Embed code (iframe, JS snippet, or direct link)
-- ✅ Form themes / branding customisation (6 presets + custom colours)
 - ✅ Collaborators — share form editing with team members (viewer/editor/admin roles)
 - ✅ Form scheduling (open from date X to date Y)
 - ✅ Email notifications to creator on new response

@@ -215,22 +215,6 @@ export const webhooks = pgTable("webhooks", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const formThemes = pgTable("form_themes", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  ownerId: uuid("owner_id").notNull(),
-  name: text("name").notNull(),
-  colors: jsonb("colors").$type<{
-    primary?: string;
-    background?: string;
-    text?: string;
-    border?: string;
-  }>(),
-  logoUrl: text("logo_url"),
-  fontFamily: text("font_family"),
-  customCss: text("custom_css"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
-
 export const collaborators = pgTable(
   "collaborators",
   {

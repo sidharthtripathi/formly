@@ -30,7 +30,6 @@ export const {
   analysisConversations,
   subscriptions,
   webhooks,
-  formThemes,
   collaborators,
   emailNotifications,
   accounts,
