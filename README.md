@@ -33,7 +33,7 @@ formly/
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) >= 1.1.0
+- [Node.js](https://nodejs.org) >= 18
 - [Docker](https://docker.com) (for PostgreSQL)
 
 ## Setup
@@ -41,7 +41,7 @@ formly/
 ### 1. Clone and install dependencies
 
 ```bash
-bun install
+npm install
 ```
 
 ### 2. Configure environment variables
@@ -95,43 +95,43 @@ docker compose up -d
 ### 4. Push database schema
 
 ```bash
-bun run db:push
+npm run db:push
 ```
 
 ### 5. Run the development server
 
 ```bash
-bun run dev
+npm run dev
 ```
 
 This starts the Next.js frontend (`http://localhost:3000`). The Express API server runs separately:
 
 ```bash
-cd server && bun run dev
+cd apps/server && npm run dev
 ```
 
 ## Development
 
 ### Run API only (Express server on port 3001)
 ```bash
-cd server && bun run dev
+cd apps/server && npm run dev
 ```
 
 ### Run web only (Next.js on port 3000)
 ```bash
-cd apps/web && bun run dev
+cd apps/web && npm run dev
 ```
 
 ### Build for production
 ```bash
-bun run build
+npm run build
 ```
 
 ### Database operations
 ```bash
-bun run db:push      # Push schema (faster for development)
-bun run db:migrate   # Run migrations
-bun run db:studio    # Open Drizzle Studio
+npm run db:push      # Push schema (faster for development)
+npm run db:migrate   # Run migrations
+npm run db:studio    # Open Drizzle Studio
 ```
 
 ## Features

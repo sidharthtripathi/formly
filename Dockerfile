@@ -1,14 +1,14 @@
-FROM oven/bun:1 AS builder
+FROM node:20-alpine AS builder
 WORKDIR /app
-COPY package.json bun.lockb* ./
+COPY package.json package-lock.json* ./
 COPY apps/web/package.json apps/web/
 COPY apps/server/package.json apps/server/
 COPY packages/shared/package.json packages/shared/
-RUN bun install --frozen-lockfile
+RUN npm ci
 COPY . .
-RUN bun run build
+RUN npm run build
 
-FROM oven/bun:1 AS web
+FROM node:20-alpine AS web
 WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/web/.next ./.next
@@ -19,7 +19,7 @@ ENV NODE_ENV=production
 EXPOSE 3000
 CMD ["next", "start"]
 
-FROM oven/bun:1 AS server
+FROM node:20-alpine AS server
 WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/server/dist ./dist
@@ -27,4 +27,4 @@ COPY --from=builder /app/apps/server/package.json ./package.json
 COPY --from=builder /app/packages ./packages
 ENV NODE_ENV=production
 EXPOSE 3001
-CMD ["bun", "run", "dist/index.js"]
+CMD ["node", "dist/index.js"]

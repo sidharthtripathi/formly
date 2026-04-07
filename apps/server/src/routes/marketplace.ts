@@ -47,14 +47,14 @@ marketplaceRouter.get("/", async (req, res) => {
 
     // Filter by category if provided
     if (category) {
-      listings = listings.filter((l) => l.category === category);
+      listings = listings.filter((l: typeof listings[number]) => l.category === category);
     }
 
     // Filter by search query if provided
     if (q) {
       const query = q.toLowerCase();
       listings = listings.filter(
-        (l) =>
+        (l: typeof listings[number]) =>
           l.title.toLowerCase().includes(query) ||
           l.description?.toLowerCase().includes(query)
       );

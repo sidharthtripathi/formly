@@ -119,7 +119,7 @@ responsesRouter.get("/export", async (req: AuthRequest, res) => {
 
     const schemaFields = (form.schema as Record<string, unknown>)?.fields as Array<{ id: string; label: string }> || [];
     const headers = ["Submitted At", ...schemaFields.map((f) => f.label)];
-    const rows = formResponses.map((r) => [
+    const rows = formResponses.map((r: typeof formResponses[number]) => [
       r.submittedAt,
       ...schemaFields.map((f) => (r.answers as Record<string, unknown>)?.[f.id] || ""),
     ]);
