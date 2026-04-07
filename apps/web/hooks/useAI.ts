@@ -3,8 +3,13 @@ import { useCreditStatus } from "./useUser";
 import { useUpdateForm } from "./useForms";
 import { useFormStore } from "@/stores/formStore";
 import type { FormSchema, FormField } from "@formly/shared/types/form-schema";
+import { useSession } from "next-auth/react";
 
 const AI_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
+function getSessionUserId(session: ReturnType<typeof useSession>["data"]) {
+  return (session?.user as { id?: string })?.id;
+}
 
 export function useFormGeneration(formId: string) {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -13,10 +18,16 @@ export function useFormGeneration(formId: string) {
   const eventSourceRef = useRef<EventSource | null>(null);
   const { setSchema, setMode, addStreamedField } = useFormStore();
   const { data: credits } = useCreditStatus();
+  const { data: session } = useSession();
   const updateForm = useUpdateForm();
 
   const generate = useCallback(
     async (prompt: string) => {
+      console.log("[useFormGeneration] generate() called, prompt:", prompt);
+      console.log("[useFormGeneration] session:", session);
+      console.log("[useFormGeneration] userId from session:", getSessionUserId(session));
+      console.log("[useFormGeneration] credits:", credits);
+
       if (credits && credits.limit !== -1 && credits.used >= credits.limit) {
         setError("AI credits exhausted. Please upgrade to Pro or wait for reset.");
         setMode("manual");
@@ -27,8 +38,16 @@ export function useFormGeneration(formId: string) {
       setError(null);
       setStreamedContent("");
 
+      // Get current user session for SSE auth
+      const userId = getSessionUserId(session);
+      console.log("[useFormGeneration] Connecting to SSE with userId:", userId);
+
       const params = new URLSearchParams({ prompt });
+      if (userId) {
+        params.set("userId", userId);
+      }
       const es = new EventSource(`${AI_API_URL}/api/ai/generate?${params}`);
+      console.log("[useFormGeneration] EventSource created, URL:", `${AI_API_URL}/api/ai/generate?${params}`);
       eventSourceRef.current = es;
 
       let content = "";
@@ -80,10 +99,15 @@ export function useFormGeneration(formId: string) {
         }
       });
 
-      es.onerror = () => {
+      es.onerror = (e) => {
+        console.error("[useFormGeneration] SSE error:", e);
         es.close();
         setIsGenerating(false);
         setError("Connection error. Please try again.");
+      };
+
+      es.onopen = () => {
+        console.log("[useFormGeneration] SSE connection opened");
       };
     },
     [credits, formId, setSchema, setMode, updateForm, addStreamedField]
@@ -102,6 +126,7 @@ export function useFormModification(formId: string) {
   const [error, setError] = useState<string | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const { setSchema } = useFormStore();
+  const { data: session } = useSession();
   const updateForm = useUpdateForm();
 
   const modify = useCallback(
@@ -109,8 +134,15 @@ export function useFormModification(formId: string) {
       setIsGenerating(true);
       setError(null);
 
+      // Get current user session for auth
+      const userId = getSessionUserId(session);
+      const url = new URL(`${AI_API_URL}/api/ai/modify`);
+      if (userId) {
+        url.searchParams.set("userId", userId);
+      }
+
       // Use fetch with POST for SSE
-      const response = await fetch(`${AI_API_URL}/api/ai/modify`, {
+      const response = await fetch(url.toString(), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt, currentSchema, selectedFieldId }),

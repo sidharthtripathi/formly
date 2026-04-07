@@ -52,7 +52,8 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError(result.error || "Failed to sign in");
+        // NextAuth hides the specific reason for security; show a friendly message
+        setError("Invalid email or password. Please try again.");
       } else {
         router.push("/");
       }

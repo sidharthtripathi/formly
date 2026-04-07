@@ -12,13 +12,14 @@ async function proxyRequest(
   console.log("[Proxy] NEXTAUTH_URL:", process.env.NEXTAUTH_URL);
   console.log("[Proxy] Cookie header:", request.headers.get("cookie")?.substring(0, 100));
 
-  // Use getToken at Edge Runtime for auth
+  // Use getToken for auth
   const token = await getToken({
     req: request,
     secret: process.env.AUTH_SECRET,
   });
 
   console.log("[Proxy] Token decoded:", token);
+  console.log("[Proxy] Token id:", token?.id);
 
   if (!token?.id) {
     console.error("Proxy auth failed - no valid token:", token);

@@ -35,16 +35,20 @@ function AIGenerationHandler({
   prompt: string | null;
   onGenerated?: () => void;
 }) {
+  console.log("[AIGenerationHandler] Rendered with:", { formId, prompt });
   const { schema, clearStreamedFields, setGenerating } = useFormStore();
   const { generate, isGenerating } = useFormGeneration(formId);
   const hasGenerated = useRef(false);
 
   useEffect(() => {
     // Only generate once, when we have a real formId, a prompt, empty schema, and not already generating
+    console.log("[AIGenerationHandler] effect fired:", { formId, prompt, fieldCount: schema?.fields?.length ?? 0, isGenerating, hasGenerated: hasGenerated.current });
     if (!formId || formId === "new" || !prompt || (schema?.fields?.length ?? 0) > 0 || isGenerating || hasGenerated.current) {
+      console.log("[AIGenerationHandler] Skipping generate - condition not met");
       return;
     }
 
+    console.log("[AIGenerationHandler] Calling generate with prompt:", prompt);
     hasGenerated.current = true;
     // Clear any previous streamed fields and start fresh
     clearStreamedFields();
