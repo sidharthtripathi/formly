@@ -37,18 +37,19 @@ ai-form/
 │   │   │   ├── index.ts       # Express app entry
 │   │   │   ├── routes/        # API routes (forms, ai, responses, templates, etc.)
 │   │   │   ├── middleware/    # Auth (JWT), rate limiting
-│   │   │   └── services/      # Storage service (local/S3)
+│   │   │   ├── services/      # Storage service (local/S3)
+│   │   │   └── db/            # Prisma client
+│   │   ├── prisma/
+│   │   │   └── schema.prisma  # Prisma schema
 │   │   └── Dockerfile
-│   │
-│   └── api/                    # Empty placeholder
 │
 ├── packages/
 │   └── shared/                 # Shared types and DB schema
 │       ├── types/
 │       │   ├── form-schema.ts  # FormSchema, FormField, FieldType types
 │       │   └── api.ts
-│       └── db/
-│           └── schema.ts       # Drizzle ORM schema (users, forms, responses, etc.)
+│       └── utils/
+│           └── form-validators.ts
 │
 ├── docker-compose.yml           # Dev: PostgreSQL only
 ├── docker-compose.prod.yml     # Prod: web + server + postgres
@@ -62,7 +63,7 @@ ai-form/
 ### Authentication
 - **NextAuth.js v5** with JWT strategy
 - Providers: Google OAuth + Credentials (email/password)
-- Database adapter: DrizzleAdapter with PostgreSQL
+- Database adapter: PrismaAdapter with PostgreSQL
 - Users table has `passwordHash` for credentials auth
 
 ### API Communication
@@ -95,7 +96,7 @@ Key variables (see `.env.example`):
 - `STORAGE_MODE=local` - Storage backend toggle
 - `NEXT_PUBLIC_API_URL=http://localhost:3001` - Express API URL
 
-## Database Schema (Drizzle)
+## Database Schema (Prisma)
 
 Tables: `users`, `forms`, `responses`, `templates`, `marketplace_listings`, `marketplace_upvotes`, `analysis_conversations`, `subscriptions`, `webhooks`, `collaborators`, `email_notifications`
 
@@ -124,8 +125,7 @@ NextAuth tables: `accounts`, `sessions`, `verification_tokens`
 1. **Server is `apps/server`**, not `server/` at root
 2. **API runs on port 3001**, Next.js frontend on port 3000
 3. **Database user is `postgres`** in dev docker-compose, `formly` in prod
-4. **Empty `apps/api` directory** is a placeholder, not used
-5. **All form fields use `packages/shared/types/form-schema.ts`** as the canonical type
+4. **All form fields use `packages/shared/types/form-schema.ts`** as the canonical type
 6. **Stripe webhooks** at `/webhooks/stripe` (raw body parsing enabled)
 7. **Next.js middleware** protects routes via JWT, passes user ID via `X-User-Id` header to Express
 8. **File uploads** served at `/uploads/:filename` when `STORAGE_MODE=local`
@@ -136,9 +136,9 @@ NextAuth tables: `accounts`, `sessions`, `verification_tokens`
 |-------|------------|
 | Frontend | Next.js 15, React 19, shadcn/ui, TanStack Query, Zustand, Framer Motion |
 | Backend | Express 4, Node.js |
-| Database | PostgreSQL 16, Drizzle ORM |
+| Database | PostgreSQL 16, Prisma ORM |
 | Auth | NextAuth.js v5 (JWT), Google OAuth, bcrypt |
 | AI | MiniMax M2.7 via @anthropic-ai/sdk |
 | Payments | Stripe |
 | Storage | Local filesystem or AWS S3 |
-| Build | Turborepo, Bun |
+| Build | Turborepo, Node.js |

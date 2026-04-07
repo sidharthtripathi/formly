@@ -174,7 +174,7 @@ Formly must support all standard field types the AI can generate and the user ca
 | Client State | Zustand | Lightweight, no boilerplate (replaces Recoil) |
 | Backend Framework | Express on Node.js | Mature, widely used, great SSE support |
 | Database | PostgreSQL (self-hosted via Docker) | ACID, JSON support, relational responses |
-| ORM | Drizzle ORM | Type-safe, SQL-first |
+| ORM | Prisma ORM | Type-safe, SQL-first |
 | Auth | NextAuth.js v5 | Google OAuth + Credentials, JWT sessions |
 | Payments | Stripe | Subscription management |
 | AI | MiniMax M2.7 via Anthropic SDK | Streaming form generation and analysis |
@@ -217,7 +217,7 @@ formly/
 │   │   ├── hooks/                    # Custom React hooks
 │   │   ├── lib/
 │   │   │   ├── auth.ts               # NextAuth.js v5 config
-│   │   │   ├── api-client.ts         # Typed API client for Express backend
+│   │   │   ├── api-helpers.ts        # Typed API client for Express backend
 │   │   │   └── db.ts                 # Database connection
 │   │   └── stores/                   # Zustand stores
 │   │
@@ -242,25 +242,24 @@ formly/
 │   │   │   │   └── storage.ts        # Unified storage (local/S3)
 │   │   │   └── db/
 │   │   │       └── index.ts          # DB connection
-│   │   ├── drizzle.config.ts
+│   │   ├── prisma/
+│   │   │   └── schema.prisma         # Prisma schema
 │   │   └── Dockerfile
-│   │
-│   └── api/                         # Placeholder (not currently used)
 │
 ├── packages/
 │   └── shared/
-│       ├── db/
-│       │   └── schema.ts             # Drizzle schema (shared)
-│       └── types/
-│           ├── form-schema.ts        # The canonical FormSchema type
-│           └── api.ts                # Shared API types
+│       ├── types/
+│       │   ├── form-schema.ts        # The canonical FormSchema type
+│       │   └── api.ts                # Shared API types
+│       └── utils/
+│           └── form-validators.ts    # Shared validation utilities
 │
 ├── docker-compose.yml               # Development: PostgreSQL only
 ├── docker-compose.prod.yml          # Production: web + server + postgres
 ├── docker-compose.deploy.yml        # Deployment variant
 ├── Dockerfile                       # Multi-stage build for both apps
 ├── turbo.json
-├── package.json                     # Root workspace config (bun)
+├── package.json                     # Root workspace config
 └── .env.example
 ```
 
@@ -1553,28 +1552,36 @@ The root `Dockerfile` builds both `apps/web` and `apps/server` using Turbo:
 
 ```dockerfile
 # Multi-stage build for both apps
-FROM oven/bun:1 AS builder
+FROM node:20-alpine AS builder
 WORKDIR /app
-COPY package.json bun.lockb* ./
+COPY package.json package-lock.json* ./
 COPY apps/web/package.json apps/web/
 COPY apps/server/package.json apps/server/
 COPY packages/shared/package.json packages/shared/
-RUN bun install --frozen-lockfile
+RUN npm ci
 COPY . .
-RUN bun run build
+RUN npm run build
 
 # Web runtime stage
-FROM oven/bun:1 AS web
+FROM node:20-alpine AS web
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/web/.next ./.next
 COPY --from=builder /app/apps/web/public ./public
+COPY --from=builder /app/apps/web/package.json ./package.json
+COPY --from=builder /app/packages ./packages
+ENV NODE_ENV=production
+EXPOSE 3000
 CMD ["next", "start"]
 
 # Server runtime stage
-FROM oven/bun:1 AS server
+FROM node:20-alpine AS server
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/server/dist ./dist
-CMD ["bun", "run", "dist/index.js"]
+COPY --from=builder /app/apps/server/package.json ./package.json
+COPY --from=builder /app/packages ./packages
+ENV NODE_ENV=production
+EXPOSE 3001
+CMD ["node", "dist/index.js"]
 ```
 
 ### Vercel Deployment
@@ -1710,7 +1717,7 @@ The following 12 quick-start templates should be pre-built and seeded in the dat
 - AI endpoints rate-limited: per-user based on plan tier
 - File uploads: virus scan not in v1, but enforce MIME type and max size server-side
 - Stripe webhook validated via signature header
-- SQL injection: mitigated by Drizzle ORM parameterised queries
+- SQL injection: mitigated by Prisma ORM parameterised queries
 - PII in responses: stored in DB, not sent to AI analysis by default (aggregate stats only)
 
 ### Accessibility
