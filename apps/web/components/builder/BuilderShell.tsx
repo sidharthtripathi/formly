@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PublishModal } from "./shared/PublishModal";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Check, Loader2, Sparkles } from "lucide-react";
+import { Check, Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 interface BuilderShellProps {
@@ -38,14 +38,7 @@ export function BuilderShell({ formId, initialSchema, initialMessage, isLocked =
         className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50"
       >
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/"
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="text-sm">Back</span>
-            </Link>
+          <div className="flex items-center gap-4 pl-10">
             <span className="font-bold text-xl flex items-center gap-1">
               <Sparkles className="w-4 h-4 text-primary" />
               formly
@@ -75,7 +68,7 @@ export function BuilderShell({ formId, initialSchema, initialMessage, isLocked =
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.8 }}
-                  className="text-xs text-green-600 flex items-center gap-1"
+                  className="text-xs text-primary flex items-center gap-1"
                 >
                   <Check className="w-3 h-3" />
                   Saved

@@ -2,6 +2,7 @@
 
 import { useFormStore } from "@/stores/formStore";
 import { cn } from "@/lib/utils";
+import { Bot, Pencil } from "lucide-react";
 
 export function ModeToggle() {
   const { builderMode, setMode } = useFormStore();
@@ -17,7 +18,7 @@ export function ModeToggle() {
             : "text-muted-foreground hover:text-foreground"
         )}
       >
-        <span>✨</span>
+        <Bot className="w-4 h-4" />
         <span>AI Assist</span>
       </button>
       <button
@@ -29,7 +30,7 @@ export function ModeToggle() {
             : "text-muted-foreground hover:text-foreground"
         )}
       >
-        <span>✏️</span>
+        <Pencil className="w-4 h-4" />
         <span>Manual</span>
       </button>
     </div>

@@ -104,8 +104,8 @@ export function PageRenderer({ schema, formId, isAnonymous }: PageRendererProps)
   if (isComplete) {
     return (
       <div className="text-center space-y-4 py-12">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-          <Check className="w-8 h-8 text-green-600" />
+        <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+          <Check className="w-8 h-8 text-primary" />
         </div>
         <h2 className="text-2xl font-bold">{schema.settings?.successMessage || "Thank you!"}</h2>
         {schema.settings?.redirectUrl && (

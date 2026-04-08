@@ -23,8 +23,8 @@ export function CreditsCounter() {
         className={cn(
           "font-medium",
           remaining <= 0 && "text-destructive",
-          remaining > 0 && remaining <= 5 && "text-yellow-600",
-          remaining > 5 && "text-green-600"
+          remaining > 0 && remaining <= 5 && "text-muted-foreground",
+          remaining > 5 && "text-foreground"
         )}
       >
         {remaining}/{limit}
@@ -34,8 +34,8 @@ export function CreditsCounter() {
           className={cn(
             "h-full transition-all",
             remaining <= 0 && "bg-destructive",
-            remaining > 0 && remaining <= 5 && "bg-yellow-500",
-            remaining > 5 && "bg-green-500"
+            remaining > 0 && remaining <= 5 && "bg-muted",
+            remaining > 5 && "bg-primary"
           )}
           style={{ width: `${Math.max(0, percent)}%` }}
         />

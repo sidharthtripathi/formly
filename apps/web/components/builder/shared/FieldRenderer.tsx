@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import type { FormField, FieldType } from "@formly/shared/types/form-schema";
-import { Star, Heart, Check } from "lucide-react";
+import { Star, Heart, Check, X, ArrowUp, ArrowDown } from "lucide-react";
 
 interface FieldRendererProps {
   field: FormField;
@@ -236,7 +236,7 @@ export function FieldRenderer({
                     onClick={() => onChange?.(multiVal.filter((x) => x !== v))}
                     className="ml-1 hover:text-destructive"
                   >
-                    ×
+                    <X className="w-3 h-3" />
                   </button>
                 </span>
               ))}
@@ -284,7 +284,7 @@ export function FieldRenderer({
                 disabled={disabled}
                 className={cn(
                   "p-1 transition-colors",
-                  n <= (value as number || 0) && "text-yellow-500",
+                  n <= (value as number || 0) && "text-primary",
                   n > (value as number || 0) && "text-muted-foreground"
                 )}
               >
@@ -367,7 +367,7 @@ export function FieldRenderer({
                       className="p-1 hover:bg-accent rounded"
                       disabled={disabled}
                     >
-                      ↑
+                      <ArrowUp className="w-4 h-4" />
                     </button>
                   )}
                   {idx < ranked.length - 1 && (
@@ -381,7 +381,7 @@ export function FieldRenderer({
                       className="p-1 hover:bg-accent rounded"
                       disabled={disabled}
                     >
-                      ↓
+                      <ArrowDown className="w-4 h-4" />
                     </button>
                   )}
                 </div>

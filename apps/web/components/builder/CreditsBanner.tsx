@@ -16,8 +16,8 @@ export function CreditsBanner() {
   if (dismissed) return null;
 
   return (
-    <div className="bg-yellow-50 border-b border-yellow-100 px-4 py-2 flex items-center justify-between">
-      <div className="flex items-center gap-2 text-sm text-yellow-800">
+    <div className="bg-destructive/10 border-b border-destructive/20 px-4 py-2 flex items-center justify-between">
+      <div className="flex items-center gap-2 text-sm text-destructive">
         <AlertTriangle className="w-4 h-4" />
         <span>
           You&apos;ve used all your AI credits for this month.
@@ -28,14 +28,14 @@ export function CreditsBanner() {
         <Button
           variant="ghost"
           size="sm"
-          className="text-yellow-800 hover:text-yellow-900 hover:bg-yellow-100"
+          className="text-destructive hover:bg-destructive/10"
           onClick={() => switchToManualDueToCredits()}
         >
-          Upgrade to Pro →
+          Upgrade to Pro
         </Button>
         <button
           onClick={() => setDismissed(true)}
-          className="text-yellow-800 hover:text-yellow-900 p-1"
+          className="text-destructive hover:bg-destructive/10 p-1 rounded"
         >
           <X className="w-4 h-4" />
         </button>

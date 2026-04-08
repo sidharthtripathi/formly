@@ -6,6 +6,34 @@ import { Button } from "@/components/ui/button";
 import type { FieldType } from "@formly/shared/types/form-schema";
 import { Plus, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Type,
+  AlignLeft,
+  Mail,
+  Phone,
+  Link,
+  Hash,
+  Lock,
+  Circle,
+  CheckSquare,
+  ChevronDown as ChevronDownIcon,
+  List,
+  Check,
+  Star,
+  Calendar,
+  Clock,
+  Upload,
+  Image,
+  Signature,
+  Heading,
+  Info,
+  Pause,
+  Grid3X3,
+  MoveHorizontal,
+  MapPin,
+  Eye,
+  Calculator,
+} from "lucide-react";
 
 interface AddFieldMenuProps {
   pageIndex: number;
@@ -15,62 +43,62 @@ const FIELD_GROUPS = [
   {
     label: "Text Inputs",
     fields: [
-      { type: "short_text" as FieldType, label: "Short Text", icon: "Aa" },
-      { type: "long_text" as FieldType, label: "Long Text", icon: "¶" },
-      { type: "email" as FieldType, label: "Email", icon: "@" },
-      { type: "phone" as FieldType, label: "Phone", icon: "#" },
-      { type: "url" as FieldType, label: "URL", icon: "🔗" },
-      { type: "number" as FieldType, label: "Number", icon: "#" },
-      { type: "password" as FieldType, label: "Password", icon: "***" },
+      { type: "short_text" as FieldType, label: "Short Text", icon: Type },
+      { type: "long_text" as FieldType, label: "Long Text", icon: AlignLeft },
+      { type: "email" as FieldType, label: "Email", icon: Mail },
+      { type: "phone" as FieldType, label: "Phone", icon: Phone },
+      { type: "url" as FieldType, label: "URL", icon: Link },
+      { type: "number" as FieldType, label: "Number", icon: Hash },
+      { type: "password" as FieldType, label: "Password", icon: Lock },
     ],
   },
   {
     label: "Selection",
     fields: [
-      { type: "single_choice" as FieldType, label: "Single Choice", icon: "○" },
-      { type: "multiple_choice" as FieldType, label: "Multiple Choice", icon: "☐" },
-      { type: "dropdown" as FieldType, label: "Dropdown", icon: "▾" },
-      { type: "multi_select_dropdown" as FieldType, label: "Multi-Select", icon: "☰" },
-      { type: "yes_no" as FieldType, label: "Yes/No", icon: "✓" },
-      { type: "rating" as FieldType, label: "Rating", icon: "★" },
-      { type: "nps" as FieldType, label: "NPS", icon: "0-10" },
-      { type: "likert_scale" as FieldType, label: "Likert Scale", icon: "¹-⁵" },
-      { type: "ranking" as FieldType, label: "Ranking", icon: "↕" },
+      { type: "single_choice" as FieldType, label: "Single Choice", icon: Circle },
+      { type: "multiple_choice" as FieldType, label: "Multiple Choice", icon: CheckSquare },
+      { type: "dropdown" as FieldType, label: "Dropdown", icon: ChevronDownIcon },
+      { type: "multi_select_dropdown" as FieldType, label: "Multi-Select", icon: List },
+      { type: "yes_no" as FieldType, label: "Yes/No", icon: Check },
+      { type: "rating" as FieldType, label: "Rating", icon: Star },
+      { type: "nps" as FieldType, label: "NPS", icon: Hash },
+      { type: "likert_scale" as FieldType, label: "Likert Scale", icon: List },
+      { type: "ranking" as FieldType, label: "Ranking", icon: MoveHorizontal },
     ],
   },
   {
     label: "Date & Time",
     fields: [
-      { type: "date" as FieldType, label: "Date", icon: "📅" },
-      { type: "time" as FieldType, label: "Time", icon: "🕐" },
-      { type: "date_time" as FieldType, label: "Date & Time", icon: "📆" },
-      { type: "date_range" as FieldType, label: "Date Range", icon: "↔" },
+      { type: "date" as FieldType, label: "Date", icon: Calendar },
+      { type: "time" as FieldType, label: "Time", icon: Clock },
+      { type: "date_time" as FieldType, label: "Date & Time", icon: Calendar },
+      { type: "date_range" as FieldType, label: "Date Range", icon: MoveHorizontal },
     ],
   },
   {
     label: "Media & File",
     fields: [
-      { type: "file_upload" as FieldType, label: "File Upload", icon: "📎" },
-      { type: "image_upload" as FieldType, label: "Image Upload", icon: "🖼" },
-      { type: "signature" as FieldType, label: "Signature", icon: "✍" },
+      { type: "file_upload" as FieldType, label: "File Upload", icon: Upload },
+      { type: "image_upload" as FieldType, label: "Image Upload", icon: Image },
+      { type: "signature" as FieldType, label: "Signature", icon: Signature },
     ],
   },
   {
     label: "Layout",
     fields: [
-      { type: "section_header" as FieldType, label: "Section Header", icon: "§" },
-      { type: "statement" as FieldType, label: "Statement", icon: "ℹ" },
-      { type: "page_break" as FieldType, label: "Page Break", icon: "⎄" },
+      { type: "section_header" as FieldType, label: "Section Header", icon: Heading },
+      { type: "statement" as FieldType, label: "Statement", icon: Info },
+      { type: "page_break" as FieldType, label: "Page Break", icon: Pause },
     ],
   },
   {
     label: "Advanced",
     fields: [
-      { type: "matrix" as FieldType, label: "Matrix", icon: "⊞" },
-      { type: "slider" as FieldType, label: "Slider", icon: "⟷" },
-      { type: "address" as FieldType, label: "Address", icon: "🏠" },
-      { type: "hidden_field" as FieldType, label: "Hidden Field", icon: "👁" },
-      { type: "calculated_field" as FieldType, label: "Calculated", icon: "∑" },
+      { type: "matrix" as FieldType, label: "Matrix", icon: Grid3X3 },
+      { type: "slider" as FieldType, label: "Slider", icon: MoveHorizontal },
+      { type: "address" as FieldType, label: "Address", icon: MapPin },
+      { type: "hidden_field" as FieldType, label: "Hidden Field", icon: Eye },
+      { type: "calculated_field" as FieldType, label: "Calculated", icon: Calculator },
     ],
   },
 ];
@@ -105,16 +133,19 @@ export function AddFieldMenu({ pageIndex }: AddFieldMenuProps) {
               <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground bg-muted/50">
                 {group.label}
               </div>
-              {group.fields.map((field) => (
-                <button
-                  key={field.type}
-                  onClick={() => handleAddField(field.type)}
-                  className="w-full px-3 py-2 text-sm text-left hover:bg-muted flex items-center gap-2"
-                >
-                  <span className="w-6 text-center text-muted-foreground">{field.icon}</span>
-                  <span>{field.label}</span>
-                </button>
-              ))}
+              {group.fields.map((field) => {
+                const IconComponent = field.icon;
+                return (
+                  <button
+                    key={field.type}
+                    onClick={() => handleAddField(field.type)}
+                    className="w-full px-3 py-2 text-sm text-left hover:bg-muted flex items-center gap-2"
+                  >
+                    <IconComponent className="w-4 h-4 text-muted-foreground" />
+                    <span>{field.label}</span>
+                  </button>
+                );
+              })}
             </div>
           ))}
         </div>

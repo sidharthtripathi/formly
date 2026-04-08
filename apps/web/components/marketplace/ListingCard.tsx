@@ -5,7 +5,7 @@ import { useMarketplace, useToggleUpvote, useCopyMarketplaceTemplate } from "@/h
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ArrowUp, Copy, Search, Clock } from "lucide-react";
+import { ArrowUp, Copy, Search, Clock, Store, ArrowUpDown, FileText } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -36,7 +36,7 @@ export function MarketplaceBrowser() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold">🏪 Marketplace</h1>
+          <h1 className="text-3xl font-bold flex items-center gap-2"><Store className="w-6 h-6" /> Marketplace</h1>
           <p className="text-muted-foreground mt-1">
             Discover and use templates created by the community
           </p>
@@ -85,9 +85,9 @@ export function MarketplaceBrowser() {
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
-            {sort === "upvotes" && "↑ Most Upvoted"}
-            {sort === "newest" && "🕐 Newest"}
-            {sort === "copies" && "📋 Most Used"}
+            {sort === "upvotes" && "Most Upvoted"}
+            {sort === "newest" && "Newest"}
+            {sort === "copies" && "Most Used"}
           </button>
         ))}
       </div>
@@ -187,7 +187,7 @@ function ListingCard({
           {isCopying ? "Copying..." : "Use This"}
         </Button>
         <span className="text-xs text-muted-foreground flex items-center gap-1">
-          📋{listing.copyCount || 0}
+          <FileText className="w-3 h-3" />{listing.copyCount || 0}
         </span>
       </CardFooter>
     </Card>

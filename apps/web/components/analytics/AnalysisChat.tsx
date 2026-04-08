@@ -7,7 +7,7 @@ import { useResponses } from "@/hooks/useResponses";
 import { ChartRenderer } from "./ChartRenderer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Send, Loader2, Lock, X } from "lucide-react";
+import { ArrowLeft, Send, Loader2, Lock, X, Bot, User } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { ChartSpec } from "./ChartRenderer";
@@ -172,7 +172,11 @@ function AnalysisChatContent({ formId }: AnalysisChatProps) {
               )}
             >
               <div className="flex items-center gap-1 text-xs opacity-70 mb-1">
-                {msg.role === "assistant" ? "🤖" : "👤"}
+                {msg.role === "assistant" ? (
+                  <Bot className="w-3 h-3" />
+                ) : (
+                  <User className="w-3 h-3" />
+                )}
                 <span>
                   {msg.timestamp.toLocaleTimeString([], {
                     hour: "2-digit",

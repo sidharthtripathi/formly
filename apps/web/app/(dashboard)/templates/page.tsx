@@ -13,7 +13,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Pencil, Trash2, Copy, Upload, Clock, FileText } from "lucide-react";
+import { Pencil, Trash2, Copy, Upload, Clock, FileText, Globe, Lock, Store } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
@@ -37,13 +37,13 @@ export default function TemplatesPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold">📋 My Templates</h1>
+          <h1 className="text-3xl font-bold">My Templates</h1>
           <p className="text-muted-foreground mt-1">
             Save forms as templates to reuse them later
           </p>
         </div>
         <Button variant="outline" asChild>
-          <Link href="/marketplace">🏪 Browse Marketplace</Link>
+          <Link href="/marketplace"><Store className="w-4 h-4 mr-1" /> Browse Marketplace</Link>
         </Button>
       </div>
 
@@ -68,8 +68,12 @@ export default function TemplatesPage() {
             <Card key={template.id} className="hover:border-primary/50 transition-colors">
               <CardContent className="pt-4">
                 <div className="flex items-start justify-between mb-2">
-                  <span className="text-xs px-2 py-0.5 bg-muted rounded text-muted-foreground">
-                    {template.isPublic ? "🌐 Public" : "🔒 Private"}
+                  <span className="text-xs px-2 py-0.5 bg-muted rounded text-muted-foreground flex items-center gap-1">
+                    {template.isPublic ? (
+                      <><Globe className="w-3 h-3" /> Public</>
+                    ) : (
+                      <><Lock className="w-3 h-3" /> Private</>
+                    )}
                   </span>
                   {template.createdAt && (
                     <span className="text-xs text-muted-foreground flex items-center gap-1">

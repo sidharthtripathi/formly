@@ -6,7 +6,7 @@ import { useCreditStatus } from "@/hooks/useUser";
 import { useFormModification } from "@/hooks/useAI";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Send, Square, Loader2, X } from "lucide-react";
+import { Send, Square, Loader2, X, Bot, User } from "lucide-react";
 
 interface PromptPanelProps {
   formId: string;
@@ -124,7 +124,11 @@ export function PromptPanel({ formId, initialMessage, isLocked = false }: Prompt
               )}
             >
               <div className="flex items-center gap-1 text-xs opacity-70 mb-1">
-                {msg.role === "assistant" ? "🤖" : "👤"}
+                {msg.role === "assistant" ? (
+                  <Bot className="w-3 h-3" />
+                ) : (
+                  <User className="w-3 h-3" />
+                )}
                 <span>
                   {msg.timestamp.toLocaleTimeString([], {
                     hour: "2-digit",

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Download, ChevronLeft, ChevronRight, Search, Calendar, X, MessageSquare } from "lucide-react";
+import { ArrowLeft, Download, ChevronLeft, ChevronRight, Search, Calendar, X, MessageSquare, Star } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -146,7 +146,16 @@ export default function ResponsesPage() {
                           const answer = response.answers?.[field.id];
                           let displayValue = answer;
                           if (Array.isArray(answer)) displayValue = answer.join(", ");
-                          if (field.type === "rating") displayValue = "★".repeat(answer || 0);
+                          if (field.type === "rating") {
+                            return (
+                              <td key={field.id} className="px-4 py-3 text-sm truncate max-w-[200px]">
+                                <div className="flex items-center gap-1">
+                                  <Star className="w-4 h-4 text-primary fill-primary" />
+                                  <span>{answer || 0}</span>
+                                </div>
+                              </td>
+                            );
+                          }
                           return (
                             <td key={field.id} className="px-4 py-3 text-sm truncate max-w-[200px]">
                               {displayValue ?? "-"}

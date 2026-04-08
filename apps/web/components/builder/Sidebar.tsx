@@ -35,6 +35,7 @@ import {
   Store,
   LogOut,
   User as UserIcon,
+  PanelLeft,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 
@@ -50,67 +51,51 @@ export function Sidebar() {
   const { data: forms, isLoading } = useForms() as { data: FormListItem[] | undefined; isLoading: boolean };
   const { data: user } = useUser();
   const deleteForm = useDeleteForm();
-  const [open, setOpen] = useState(true);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
     <>
-      {/* Toggle Button (mobile) */}
-      <button
-        onClick={() => setOpen(!open)}
-        className="fixed top-4 left-4 z-[60] p-2 bg-background border rounded-md shadow-sm lg:hidden"
-      >
-        {open ? <X className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
-      </button>
-
-      {/* Collapsed toggle (desktop) */}
-      <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        className="hidden lg:flex fixed top-4 z-[60] p-2 bg-background border rounded-md shadow-sm hover:bg-muted transition-colors"
-        style={{ left: isCollapsed ? "4px" : "284px" }}
-      >
-        {isCollapsed ? <FileText className="w-4 h-4" /> : <X className="w-4 h-4" />}
-      </button>
+      {/* Floating Toggle (visible when sidebar is closed) */}
+      {!isOpen && (
+        <button
+          onClick={() => setIsOpen(true)}
+          className="fixed top-3 left-4 z-[40] p-2 hover:bg-muted rounded-md transition-colors text-muted-foreground"
+          title="Expand Sidebar"
+        >
+          <PanelLeft className="w-5 h-5" />
+        </button>
+      )}
 
       <AnimatePresence>
         <motion.aside
           initial={false}
           animate={{
-            width: isCollapsed ? 72 : 280,
-            opacity: 1,
+            x: isOpen ? 0 : "-100%",
           }}
           transition={{ duration: 0.3, ease: "easeInOut" }}
-          className={cn(
-            "fixed inset-y-0 left-0 z-40 bg-background border-r overflow-hidden",
-            open ? "translate-x-0" : "-translate-x-full"
-          )}
+          className="fixed inset-y-0 left-0 z-50 bg-background border-r overflow-hidden shadow-2xl w-[280px]"
         >
           <div className="flex flex-col h-full w-[280px]">
             {/* Header */}
-            <div className={cn("p-4 border-b", isCollapsed && "p-2 flex flex-col items-center gap-3")}>
-              {isCollapsed ? (
-                <>
-                  <Link href="/" className="p-2 hover:bg-muted rounded-md transition-colors">
-                    <Sparkles className="w-5 h-5" />
-                  </Link>
-                  <Link href="/builder/new" className="p-2 hover:bg-muted rounded-md transition-colors">
-                    <Plus className="w-5 h-5" />
-                  </Link>
-                </>
-              ) : (
-                <Link
-                  href="/"
-                  className="flex items-center gap-2 font-bold text-lg hover:text-primary transition-colors"
-                >
-                  <Sparkles className="w-5 h-5" />
-                  <span>Formly</span>
-                </Link>
-              )}
+            <div className="p-4 border-b flex items-center justify-between">
+              <Link
+                href="/"
+                className="flex items-center gap-2 font-bold text-lg hover:text-primary transition-colors"
+              >
+                <Sparkles className="w-5 h-5 text-primary" />
+                <span>formly</span>
+              </Link>
+              <button 
+                onClick={() => setIsOpen(false)} 
+                className="p-2 hover:bg-muted rounded-md transition-colors text-muted-foreground" 
+                title="Collapse Sidebar"
+              >
+                <PanelLeft className="w-5 h-5" />
+              </button>
             </div>
 
             {/* New Form Button */}
-            {!isCollapsed && (
-              <div className="p-3">
+            <div className="p-3">
                 <Button asChild className="w-full" size="sm">
                   <Link href="/builder/new">
                     <Plus className="w-4 h-4 mr-2" />
@@ -118,11 +103,9 @@ export function Sidebar() {
                   </Link>
                 </Button>
               </div>
-            )}
 
             {/* Forms List */}
-            {!isCollapsed && (
-              <div className="flex-1 overflow-auto">
+            <div className="flex-1 overflow-auto">
                 <div className="p-2">
                   <h3 className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                     <LayoutDashboard className="w-3 h-3" />
@@ -174,34 +157,11 @@ export function Sidebar() {
                 </motion.div>
               </div>
             </div>
-            )}
 
             {/* User Section */}
-            <div className={cn("border-t", isCollapsed ? "p-2 flex flex-col items-center gap-3" : "p-4")}>
+            <div className="border-t p-4">
               {user ? (
-                isCollapsed ? (
-                  <div className="flex flex-col items-center gap-2">
-                    {user.avatarUrl ? (
-                      <img
-                        src={user.avatarUrl}
-                        alt={user.name || "User"}
-                        className="w-9 h-9 rounded-full"
-                      />
-                    ) : (
-                      <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-                        <UserIcon className="w-5 h-5 text-primary" />
-                      </div>
-                    )}
-                    <button
-                      onClick={() => signOut({ callbackUrl: "/login" })}
-                      className="p-2 rounded-md hover:bg-muted transition-colors"
-                      title="Sign out"
-                    >
-                      <LogOut className="w-4 h-4 text-muted-foreground" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3">
                     <div className="flex-shrink-0">
                       {user.avatarUrl ? (
                         <img
@@ -231,53 +191,45 @@ export function Sidebar() {
                       <LogOut className="w-4 h-4 text-muted-foreground" />
                     </button>
                   </div>
-                )
               ) : (
-                isCollapsed ? (
-                  <div className="w-9 h-9 rounded-full bg-muted animate-pulse" />
-                ) : (
-                  <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-full bg-muted animate-pulse" />
                     <div className="flex-1 space-y-1">
                       <div className="h-3 w-20 bg-muted rounded animate-pulse" />
-                      <div className="h-2 w-28 bg-muted rounded animate-pulse" />
                     </div>
                   </div>
-                )
               )}
 
-              {!isCollapsed && (
-                <div className="mt-3 space-y-1">
-                  <Link
-                    href="/templates"
-                    className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors"
-                  >
-                    <Save className="w-4 h-4" />
-                    My Templates
-                  </Link>
-                  <Link
-                    href="/marketplace"
-                    className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors"
-                  >
-                    <Store className="w-4 h-4" />
-                    Marketplace
-                  </Link>
-                </div>
-              )}
+              <div className="mt-3 space-y-1">
+                <Link
+                  href="/templates"
+                  className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors"
+                >
+                  <Save className="w-4 h-4" />
+                  My Templates
+                </Link>
+                <Link
+                  href="/marketplace"
+                  className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors"
+                >
+                  <Store className="w-4 h-4" />
+                  Marketplace
+                </Link>
+              </div>
             </div>
           </div>
         </motion.aside>
       </AnimatePresence>
 
-      {/* Overlay (mobile) */}
+      {/* Overlay (always covers beneath sidesheet on all screens) */}
       <AnimatePresence>
-        {open && (
+        {isOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-30 lg:hidden"
-            onClick={() => setOpen(false)}
+            className="fixed inset-0 bg-black/20 z-40 backdrop-blur-sm"
+            onClick={() => setIsOpen(false)}
           />
         )}
       </AnimatePresence>
@@ -303,7 +255,7 @@ function FormListItem({
   const statusBadge = () => {
     if (form.status === "published") {
       return (
-        <span className="inline-flex items-center gap-1 text-xs text-green-600">
+        <span className="inline-flex items-center gap-1 text-xs text-primary">
           <CheckCircle className="w-3 h-3" />
           Published
         </span>
