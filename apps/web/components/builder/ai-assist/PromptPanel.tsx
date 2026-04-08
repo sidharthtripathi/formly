@@ -10,6 +10,8 @@ import { Send, Square, Loader2, X } from "lucide-react";
 
 interface PromptPanelProps {
   formId: string;
+  initialMessage?: string | null;
+  isLocked?: boolean;
 }
 
 interface Message {
@@ -19,7 +21,7 @@ interface Message {
   timestamp: Date;
 }
 
-export function PromptPanel({ formId }: PromptPanelProps) {
+export function PromptPanel({ formId, initialMessage, isLocked = false }: PromptPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [taggedFields, setTaggedFields] = useState<string[]>([]);
@@ -30,19 +32,32 @@ export function PromptPanel({ formId }: PromptPanelProps) {
 
   const canUseAI = !credits || credits.limit === -1 || credits.used < credits.limit;
 
+  // Add initial message when provided (during initial generation)
+  useEffect(() => {
+    if (initialMessage && messages.length === 0) {
+      const userMessage: Message = {
+        id: "initial-message",
+        role: "user",
+        content: initialMessage,
+        timestamp: new Date(),
+      };
+      setMessages([userMessage]);
+    }
+  }, [initialMessage]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   useEffect(() => {
-    if (selectedFieldId && !taggedFields.includes(selectedFieldId)) {
+    if (selectedFieldId && !taggedFields.includes(selectedFieldId) && !isLocked) {
       const field = schema?.fields.find((f) => f.id === selectedFieldId);
       if (field) {
         setInput((prev) => `${prev} @${field.label}`.trim());
         setTaggedFields((prev) => [...prev, selectedFieldId]);
       }
     }
-  }, [selectedFieldId, schema]);
+  }, [selectedFieldId, schema, isLocked]);
 
   const handleSend = () => {
     if (!input.trim() || isGenerating || !schema) return;
@@ -80,7 +95,7 @@ export function PromptPanel({ formId }: PromptPanelProps) {
     <div className="flex flex-col h-full">
       {/* Conversation History */}
       <div className="flex-1 overflow-auto p-4 space-y-4">
-        {messages.length === 0 && (
+        {messages.length === 0 && !isLocked && (
           <div className="text-center text-muted-foreground text-sm mt-20">
             <p>Describe your form or click on fields to modify them.</p>
             <p className="mt-2">Use @fieldname to target specific fields.</p>
@@ -157,7 +172,15 @@ export function PromptPanel({ formId }: PromptPanelProps) {
 
       {/* Input */}
       <div className="p-4 border-t space-y-2">
-        {!canUseAI && (
+        {isLocked && isGenerating && (
+          <div className="text-xs text-center text-muted-foreground mb-2">
+            <span className="inline-flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+              AI is generating your form...
+            </span>
+          </div>
+        )}
+        {!canUseAI && !isLocked && (
           <div className="text-xs text-center text-destructive mb-2">
             AI credits exhausted. Switch to Manual Mode or upgrade to Pro.
           </div>
@@ -172,11 +195,11 @@ export function PromptPanel({ formId }: PromptPanelProps) {
                 ? "Describe changes or click a field to tag it..."
                 : "Credits exhausted"
             }
-            disabled={!canUseAI || isGenerating}
+            disabled={!canUseAI || isGenerating || isLocked}
             className="flex-1 min-h-[60px] resize-none rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
           <div className="flex flex-col gap-1">
-            {isGenerating ? (
+            {(isGenerating || isLocked) ? (
               <Button
                 size="icon"
                 variant="outline"

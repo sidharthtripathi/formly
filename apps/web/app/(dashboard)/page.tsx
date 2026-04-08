@@ -25,7 +25,9 @@ export default function DashboardHomePage() {
 
   const handleGenerate = () => {
     if (prompt.trim()) {
-      router.push(`/builder/new?prompt=${encodeURIComponent(prompt)}`);
+      // Store prompt in sessionStorage to pass to builder without URL params
+      sessionStorage.setItem("newFormPrompt", prompt);
+      router.push("/builder/new");
     }
   };
 

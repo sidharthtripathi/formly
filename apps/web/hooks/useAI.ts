@@ -13,6 +13,7 @@ function getSessionUserId(session: ReturnType<typeof useSession>["data"]) {
 
 export function useFormGeneration(formId: string) {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [hasStartedStreaming, setHasStartedStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [streamedContent, setStreamedContent] = useState("");
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -37,6 +38,7 @@ export function useFormGeneration(formId: string) {
       setIsGenerating(true);
       setError(null);
       setStreamedContent("");
+      setHasStartedStreaming(false);
 
       // Get current user session for SSE auth
       const userId = getSessionUserId(session);
@@ -51,9 +53,17 @@ export function useFormGeneration(formId: string) {
       eventSourceRef.current = es;
 
       let content = "";
+      let streamingStarted = false;
+      const markStreamingStarted = () => {
+        if (!streamingStarted) {
+          streamingStarted = true;
+          setHasStartedStreaming(true);
+        }
+      };
 
       // Handle raw text deltas for partial content display
       es.addEventListener("schema_delta", (e) => {
+        markStreamingStarted();
         try {
           const delta = JSON.parse(e.data);
           content += delta.text || "";
@@ -63,6 +73,7 @@ export function useFormGeneration(formId: string) {
 
       // Handle completed fields for real-time rendering
       es.addEventListener("field_complete", (e) => {
+        markStreamingStarted();
         try {
           const { field } = JSON.parse(e.data) as { field: FormField };
           addStreamedField(field);
@@ -71,6 +82,7 @@ export function useFormGeneration(formId: string) {
 
       // Handle metadata (title, pages)
       es.addEventListener("meta", (e) => {
+        markStreamingStarted();
         try {
           const { title, pages } = JSON.parse(e.data);
           // Meta is handled through the final schema parse
@@ -116,9 +128,10 @@ export function useFormGeneration(formId: string) {
   const stop = useCallback(() => {
     eventSourceRef.current?.close();
     setIsGenerating(false);
+    setHasStartedStreaming(false);
   }, []);
 
-  return { generate, stop, isGenerating, error, streamedContent };
+  return { generate, stop, isGenerating, hasStartedStreaming, error, streamedContent };
 }
 
 export function useFormModification(formId: string) {

@@ -7,16 +7,18 @@ import { useFormStore } from "@/stores/formStore";
 
 interface SplitEditorProps {
   formId: string;
+  initialMessage?: string | null;
+  isLocked?: boolean;
 }
 
-export function SplitEditor({ formId }: SplitEditorProps) {
+export function SplitEditor({ formId, initialMessage, isLocked = false }: SplitEditorProps) {
   const { schema, selectedFieldId, selectField } = useFormStore();
 
   return (
     <div className="flex h-[calc(100vh-57px)]">
       {/* Left Panel - AI Chat */}
       <div className="w-2/5 border-r flex flex-col bg-background">
-        <PromptPanel formId={formId} />
+        <PromptPanel formId={formId} initialMessage={initialMessage} isLocked={isLocked} />
       </div>
 
       {/* Right Panel - Live Preview */}
@@ -26,6 +28,7 @@ export function SplitEditor({ formId }: SplitEditorProps) {
           onFieldClick={(fieldId) => selectField(fieldId)}
           selectedFieldId={selectedFieldId}
           isEditable={false}
+          isLocked={isLocked}
         />
       </div>
     </div>

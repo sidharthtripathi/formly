@@ -13,6 +13,7 @@ interface FormPreviewProps {
   onFieldClick?: (fieldId: string) => void;
   selectedFieldId?: string | null;
   isEditable?: boolean;
+  isLocked?: boolean;
 }
 
 export function FormPreview({
@@ -20,6 +21,7 @@ export function FormPreview({
   onFieldClick,
   selectedFieldId,
   isEditable = false,
+  isLocked = false,
 }: FormPreviewProps) {
   const { deleteField, streamedFields, isGenerating } = useFormStore();
 
@@ -116,16 +118,16 @@ export function FormPreview({
                   className={cn(
                     "group relative rounded-lg transition-all",
                     isSelected && "ring-2 ring-primary ring-offset-2",
-                    isEditable && "cursor-pointer hover:bg-muted/50"
+                    isEditable && !isLocked && "cursor-pointer hover:bg-muted/50"
                   )}
                   onClick={() => {
-                    if (isEditable && onFieldClick) {
+                    if (isEditable && !isLocked && onFieldClick) {
                       onFieldClick(field.id);
                     }
                   }}
                 >
                   {/* Mini Toolbar (visible on hover) */}
-                  {isEditable && (
+                  {isEditable && !isLocked && (
                     <div className="absolute -top-3 -right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                       <button
                         onClick={(e) => {
@@ -216,10 +218,10 @@ export function FormPreview({
                     "group relative rounded-lg transition-all",
                     isSelected && "ring-2 ring-primary ring-offset-2",
                     isNewlyAdded && "animate-in ring-2 ring-primary ring-offset-2 bg-primary/5",
-                    isEditable && "cursor-pointer hover:bg-muted/50"
+                    isEditable && !isLocked && "cursor-pointer hover:bg-muted/50"
                   )}
                   onClick={() => {
-                    if (isEditable && onFieldClick) {
+                    if (isEditable && !isLocked && onFieldClick) {
                       onFieldClick(field.id);
                     }
                   }}
@@ -233,7 +235,7 @@ export function FormPreview({
                   )}
 
                   {/* Mini Toolbar (visible on hover) */}
-                  {isEditable && (
+                  {isEditable && !isLocked && (
                     <div className="absolute -top-3 -right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                       <button
                         onClick={(e) => {

@@ -1,13 +1,16 @@
 "use client";
 
-import { Suspense, useEffect, useState, useRef } from "react";
+import { Suspense, useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { BuilderShell } from "@/components/builder/BuilderShell";
+import { InitialGenerationScreen } from "@/components/builder/InitialGenerationScreen";
 import { useFormStore } from "@/stores/formStore";
 import { useForm, useCreateForm } from "@/hooks/useForms";
 import { useFormGeneration } from "@/hooks/useAI";
 import type { FormSchema } from "@formly/shared/types/form-schema";
+
+type GenerationPhase = "idle" | "creating" | "generating" | "done";
 
 function createEmptySchema(): FormSchema {
   return {
@@ -25,84 +28,54 @@ function createEmptySchema(): FormSchema {
   };
 }
 
-// Separate component to handle AI generation with correct formId
-function AIGenerationHandler({
-  formId,
-  prompt,
-  onGenerated
-}: {
-  formId: string;
-  prompt: string | null;
-  onGenerated?: () => void;
-}) {
-  console.log("[AIGenerationHandler] Rendered with:", { formId, prompt });
-  const { schema, clearStreamedFields, setGenerating } = useFormStore();
-  const { generate, isGenerating } = useFormGeneration(formId);
-  const hasGenerated = useRef(false);
-
-  useEffect(() => {
-    // Only generate once, when we have a real formId, a prompt, empty schema, and not already generating
-    console.log("[AIGenerationHandler] effect fired:", { formId, prompt, fieldCount: schema?.fields?.length ?? 0, isGenerating, hasGenerated: hasGenerated.current });
-    if (!formId || formId === "new" || !prompt || (schema?.fields?.length ?? 0) > 0 || isGenerating || hasGenerated.current) {
-      console.log("[AIGenerationHandler] Skipping generate - condition not met");
-      return;
-    }
-
-    console.log("[AIGenerationHandler] Calling generate with prompt:", prompt);
-    hasGenerated.current = true;
-    // Clear any previous streamed fields and start fresh
-    clearStreamedFields();
-    setGenerating(true);
-    generate(prompt);
-  }, [formId, prompt, schema, isGenerating, generate, clearStreamedFields, setGenerating]);
-
-  // Call onGenerated callback when generation is complete
-  useEffect(() => {
-    if ((schema?.fields?.length ?? 0) > 0 && onGenerated) {
-      setGenerating(false);
-      onGenerated();
-    }
-  }, [schema, onGenerated, setGenerating]);
-
-  return null;
-}
-
 function BuilderContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
   const formId = params.formId as string;
-  const prompt = searchParams.get("prompt");
+  const prompt = searchParams.get("prompt") || sessionStorage.getItem("newFormPrompt");
   const template = searchParams.get("template");
 
-  const [isInitializing, setIsInitializing] = useState(false);
+  const [phase, setPhase] = useState<GenerationPhase>("idle");
   const [initializedFormId, setInitializedFormId] = useState<string | null>(null);
-  const [showBuilder, setShowBuilder] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
 
   const { data: form, isLoading } = useForm(formId);
-  const { setSchema, schema } = useFormStore();
+  const { setSchema, schema, clearStreamedFields, setGenerating } = useFormStore();
   const createForm = useCreateForm();
+  const { generate, stop, isGenerating, hasStartedStreaming } = useFormGeneration(formId);
 
-  // Initialize schema from form data
+  const hasStartedGeneration = useRef(false);
+  const currentPrompt = useRef<string | null>(null);
+
+  // Track when we should transition from "creating" to "generating"
   useEffect(() => {
-    const formData = form as { schema?: FormSchema } | null | undefined;
-    if (formData?.schema && !schema) {
-      setSchema(formData.schema);
+    if (hasStartedStreaming && phase === "creating") {
+      setPhase("generating");
     }
-  }, [form, schema, setSchema]);
+  }, [hasStartedStreaming, phase]);
 
-  // Handle new form creation with prompt
+  // Track when generation is complete
+  useEffect(() => {
+    if (!isGenerating && phase === "generating" && hasStartedStreaming) {
+      // Generation finished (either completed or stopped)
+      setPhase("done");
+      setGenerating(false);
+    }
+  }, [isGenerating, hasStartedStreaming, phase, setGenerating]);
+
+  // Initialize: create form and start generation for new forms with prompt
   useEffect(() => {
     async function initNewForm() {
-      if (formId !== "new" || isInitializing || initializedFormId) return;
+      if (formId !== "new" || phase !== "idle" || initializedFormId) return;
+
+      // No prompt/template - just show builder normally
       if (!prompt && !template) {
-        // No prompt or template, just show builder with empty schema
-        setShowBuilder(true);
         return;
       }
 
-      setIsInitializing(true);
+      setPhase("creating");
+      currentPrompt.current = prompt;
 
       try {
         // Create form in database
@@ -115,38 +88,50 @@ function BuilderContent() {
         // @ts-ignore - form ID is returned
         const newFormId = newForm.id;
 
-        // Update URL without refresh using router.replace
-        router.replace(`/builder/${newFormId}?${prompt ? `prompt=${encodeURIComponent(prompt)}` : `template=${template}`}`);
+        // Clear sessionStorage now that we've consumed the prompt
+        sessionStorage.removeItem("newFormPrompt");
+
+        // Update URL without query params using router.replace
+        router.replace(`/builder/${newFormId}`);
 
         setInitializedFormId(newFormId);
-        setShowBuilder(true);
+
+        // Start generation after form is created
+        // The useEffect watching hasStartedStreaming will transition to "generating"
       } catch (err) {
         console.error("Failed to create form:", err);
-        setIsInitializing(false);
+        setPhase("idle");
         setInitError(err instanceof Error ? err.message : "Failed to create form");
       }
     }
 
     initNewForm();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formId, prompt, template]);
+  }, [formId, phase, initializedFormId, prompt, template, createForm, router]);
 
-  // For existing forms or when we have a real formId, show builder
-  const displayFormId = formId !== "new" ? formId : initializedFormId;
+  // Start generation once we have the form ID
+  useEffect(() => {
+    if (phase === "creating" && initializedFormId && !hasStartedGeneration.current && currentPrompt.current) {
+      hasStartedGeneration.current = true;
+      clearStreamedFields();
+      setGenerating(true);
+      generate(currentPrompt.current);
+    }
+  }, [phase, initializedFormId, generate, clearStreamedFields, setGenerating]);
 
-  // Show loading while initializing
-  if (formId === "new" && isInitializing) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Creating your form...</p>
-        </div>
-      </div>
-    );
-  }
+  // Handle cancel during creating/generating phases
+  const handleCancel = useCallback(() => {
+    if (phase === "creating" && !initializedFormId) {
+      // Form not created yet, just go back home
+      router.push("/");
+      return;
+    }
+    if (phase === "generating") {
+      stop();
+      setPhase("done"); // Transition to done - user will see partial form
+    }
+  }, [phase, stop, initializedFormId, router]);
 
-  // Show error state when form creation fails
+  // Handle error state
   if (formId === "new" && initError) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -160,23 +145,34 @@ function BuilderContent() {
     );
   }
 
-  // For new forms without prompt, show builder with empty schema
-  if (formId === "new" && showBuilder && !initializedFormId) {
-    return <BuilderShell formId="new" initialSchema={createEmptySchema()} />;
+  // Phase: "creating" - showing initial generation screen while form is being created
+  if (formId === "new" && phase === "creating" && !initializedFormId) {
+    return (
+      <InitialGenerationScreen
+        prompt={prompt || ""}
+        phase="creating"
+        onCancel={handleCancel}
+      />
+    );
   }
 
-  // When we have a real formId (after creation), render builder with AI handler
-  if (displayFormId && showBuilder) {
+  // Phase: "creating" or "generating" with form created - show locked builder
+  if ((phase === "creating" || phase === "generating") && initializedFormId) {
     const formData = form as { schema?: FormSchema } | null | undefined;
     const currentSchema = schema || formData?.schema;
 
     return (
-      <>
-        <AIGenerationHandler formId={displayFormId} prompt={prompt} />
-        <BuilderShell formId={displayFormId} initialSchema={currentSchema} />
-      </>
+      <BuilderShell
+        formId={initializedFormId}
+        initialSchema={currentSchema}
+        initialMessage={currentPrompt.current}
+        isLocked={true}
+      />
     );
   }
+
+  // Existing forms or forms without prompt - normal builder
+  const displayFormId = formId !== "new" ? formId : initializedFormId;
 
   // Loading state for existing forms
   if (isLoading) {
@@ -190,17 +186,35 @@ function BuilderContent() {
     );
   }
 
-  // Existing form loaded
+  // Existing form loaded - normal builder
   if (formId !== "new" && form) {
     const formData = form as { schema: FormSchema };
     return <BuilderShell formId={formId} initialSchema={formData.schema} />;
+  }
+
+  // New form without prompt - normal builder
+  if (formId === "new" && !prompt && !template) {
+    return <BuilderShell formId="new" initialSchema={createEmptySchema()} />;
+  }
+
+  // Phase: "done" or "idle" with initialized form - show normal builder
+  if (displayFormId) {
+    const formData = form as { schema?: FormSchema } | null | undefined;
+    const currentSchema = schema || formData?.schema;
+    return (
+      <BuilderShell
+        formId={displayFormId}
+        initialSchema={currentSchema}
+      />
+    );
   }
 
   // Fallback - should not reach here normally
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
-        <p className="text-muted-foreground">Form not found</p>
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-muted-foreground">Loading...</p>
       </div>
     </div>
   );

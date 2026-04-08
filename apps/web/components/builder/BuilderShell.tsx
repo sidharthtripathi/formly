@@ -17,9 +17,11 @@ import Link from "next/link";
 interface BuilderShellProps {
   formId: string;
   initialSchema?: import("@formly/shared/types/form-schema").FormSchema;
+  initialMessage?: string | null;
+  isLocked?: boolean;
 }
 
-export function BuilderShell({ formId, initialSchema }: BuilderShellProps) {
+export function BuilderShell({ formId, initialSchema, initialMessage, isLocked = false }: BuilderShellProps) {
   const { schema, builderMode } = useFormStore();
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [showPublishModal, setShowPublishModal] = useState(false);
@@ -104,7 +106,7 @@ export function BuilderShell({ formId, initialSchema }: BuilderShellProps) {
         className="flex-1"
       >
         {builderMode === "ai" ? (
-          <SplitEditor formId={formId} />
+          <SplitEditor formId={formId} initialMessage={initialMessage} isLocked={isLocked} />
         ) : (
           <ManualEditor formId={formId} />
         )}
