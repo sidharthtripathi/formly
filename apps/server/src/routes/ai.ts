@@ -3,6 +3,33 @@ import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "../db/index.js";
 import { AuthRequest } from "../middleware/auth.js";
 
+const FORM_SCHEMA_SPEC = `
+type FieldType = 'short_text' | 'long_text' | 'email' | 'phone' | 'url' | 'number' | 'password' | 'single_choice' | 'multiple_choice' | 'dropdown' | 'multi_select_dropdown' | 'yes_no' | 'rating' | 'nps' | 'likert_scale' | 'ranking' | 'date' | 'time' | 'date_time' | 'date_range' | 'file_upload' | 'image_upload' | 'signature' | 'section_header' | 'statement' | 'page_break' | 'matrix' | 'slider' | 'address' | 'hidden_field' | 'calculated_field';
+
+interface FormField {
+  id: string; // generate a random uuid
+  type: FieldType;
+  label: string;
+  placeholder?: string;
+  helpText?: string;
+  required: boolean;
+  pageIndex: number;
+  order: number;
+  options?: {id: string, label: string, value: string}[];
+  validation?: { min?: number, max?: number, minLength?: number, maxLength?: number, pattern?: string, allowedFileTypes?: string[], maxFileSizeMb?: number };
+}
+
+interface FormSchema {
+  id: string;
+  title: string;
+  description?: string;
+  pages: { id: string, index: number, title?: string, description?: string }[];
+  fields: FormField[];
+  settings: { showProgressBar: boolean, allowMultipleSubmissions: boolean, successMessage: string };
+  version: number;
+}
+`;
+
 const router: Router = Router();
 
 const client = process.env.ANTHROPIC_API_KEY
@@ -85,10 +112,11 @@ function extractCompletedFields(
   const fields: StreamField[] = [];
   let newIndex = lastProcessedIndex;
 
-  const fieldsStart = accumulatedText.indexOf('"fields":');
-  if (fieldsStart === -1 || fieldsStart < lastProcessedIndex) {
+  const fieldsMatch = accumulatedText.match(/"fields"\s*:/);
+  if (!fieldsMatch || fieldsMatch.index === undefined || fieldsMatch.index < lastProcessedIndex) {
     return { fields: [], newIndex };
   }
+  const fieldsStart = fieldsMatch.index;
 
   const scanText = accumulatedText.slice(fieldsStart);
   let braceCount = 0;
@@ -181,14 +209,17 @@ router.get("/generate", async (req: AuthRequest, res) => {
       max_tokens: 4096,
       system: `You are Formly's AI form designer. Your job is to generate a FormSchema JSON object based on the user's description.
 Rules:
-- Always output valid FormSchema JSON as defined in the schema spec
+- Always output valid FormSchema JSON exactly as defined in the schema spec
 - Choose appropriate field types for each piece of data
 - Add sensible validation, placeholders, and help text
 - For multi-step forms, use page_break fields to separate pages
 - Include conditional logic when it makes the form more intelligent
 - Keep labels concise and user-friendly
 - Required fields should be the minimum necessary
-- Output ONLY the JSON object, no markdown, no explanation`,
+- Output ONLY the JSON object, no markdown, no explanation
+
+Schema Spec:
+${FORM_SCHEMA_SPEC}`,
       messages: [{ role: "user", content: prompt }],
     });
 
@@ -305,11 +336,14 @@ router.post("/modify", async (req: AuthRequest, res) => {
       max_tokens: 4096,
       system: `You are Formly's AI form editor. The user wants to modify an existing form.
 Rules:
-- Return the complete updated FormSchema
+- Return the complete updated FormSchema exactly as defined in the schema spec
 - If the user has tagged a specific field (@fieldname), only modify that field unless explicitly told to change others
 - Preserve all existing field IDs unless adding/removing fields
 - Preserve existing validation, conditions, and settings unless asked to change them
-- Output ONLY the updated JSON object`,
+- Output ONLY the updated JSON object, no markdown, no explanation
+
+Schema Spec:
+${FORM_SCHEMA_SPEC}`,
       messages,
     });
 
