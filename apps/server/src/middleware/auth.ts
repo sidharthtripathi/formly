@@ -65,10 +65,13 @@ export async function authMiddleware(
   res: Response,
   next: NextFunction
 ): Promise<void> {
-  const pathname = req.path;
+  // Use baseUrl + path to get the full pathname since Express strips mount point prefix from req.path
+  const pathname = req.baseUrl + req.path;
 
   // Debug: log auth details
   console.log("[Auth] pathname:", pathname);
+  console.log("[Auth] baseUrl:", req.baseUrl);
+  console.log("[Auth] path:", req.path);
   console.log("[Auth] X-User-Id header:", req.headers["x-user-id"]);
   console.log("[Auth] Authorization header:", req.headers.authorization?.substring(0, 20));
 
@@ -90,7 +93,9 @@ export async function authMiddleware(
 
   // For AI endpoints, also check query param userId (used by SSE EventSource)
   const queryUserId = req.query.userId as string | undefined;
+  console.log("[Auth] queryUserId:", queryUserId);
   if (pathname.startsWith("/api/ai/") && queryUserId && await validateUser(queryUserId, req)) {
+    console.log("[Auth] Validated via query userId, user:", req.user?.id);
     next();
     return;
   }

@@ -44,6 +44,12 @@ export function useFormGeneration(formId: string) {
       const userId = getSessionUserId(session);
       console.log("[useFormGeneration] Connecting to SSE with userId:", userId);
 
+      if (!userId) {
+        setError("You must be signed in to generate forms.");
+        setIsGenerating(false);
+        return;
+      }
+
       const params = new URLSearchParams({ prompt });
       if (userId) {
         params.set("userId", userId);
@@ -97,6 +103,14 @@ export function useFormGeneration(formId: string) {
           const jsonMatch = content.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
             const schema = JSON.parse(jsonMatch[0]) as FormSchema;
+
+            // Validate schema has required fields before saving
+            if (!schema || !Array.isArray(schema.fields) || !Array.isArray(schema.pages)) {
+              console.error("[useFormGeneration] Invalid schema structure:", schema);
+              setError("Failed to parse generated form. Please try again.");
+              return;
+            }
+
             setSchema(schema);
             if (formId) {
               try {
@@ -105,6 +119,8 @@ export function useFormGeneration(formId: string) {
                 setError("Failed to save form. Your generated form is still visible above.");
               }
             }
+          } else {
+            setError("Failed to parse generated form. Please try again.");
           }
         } catch {
           setError("Failed to parse generated form. Please try again.");
@@ -122,7 +138,7 @@ export function useFormGeneration(formId: string) {
         console.log("[useFormGeneration] SSE connection opened");
       };
     },
-    [credits, formId, setSchema, setMode, updateForm, addStreamedField]
+    [credits, session, formId, setSchema, setMode, updateForm, addStreamedField]
   );
 
   const stop = useCallback(() => {

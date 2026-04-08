@@ -34,14 +34,20 @@ export function PromptPanel({ formId, initialMessage, isLocked = false }: Prompt
 
   // Add initial message when provided (during initial generation)
   useEffect(() => {
-    if (initialMessage && messages.length === 0) {
-      const userMessage: Message = {
-        id: "initial-message",
-        role: "user",
-        content: initialMessage,
-        timestamp: new Date(),
-      };
-      setMessages([userMessage]);
+    if (initialMessage) {
+      setMessages((prev) => {
+        if (prev.length === 0) {
+          return [
+            {
+              id: "initial-message",
+              role: "user",
+              content: initialMessage,
+              timestamp: new Date(),
+            },
+          ];
+        }
+        return prev;
+      });
     }
   }, [initialMessage]);
 

@@ -49,9 +49,9 @@ export function FormPreview({
   }
 
   // If we have a complete schema, use the original rendering logic
-  if (schema && schema.fields.length > 0) {
+  if (schema && schema.fields && schema.fields.length > 0) {
     // If multi-page, show simplified preview
-    if (schema.pages.length > 1) {
+    if (schema.pages && schema.pages.length > 1) {
       return (
         <div className="p-6">
           <div className="bg-background rounded-lg border shadow-sm p-6 max-w-xl mx-auto">

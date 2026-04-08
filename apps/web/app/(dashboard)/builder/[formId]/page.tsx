@@ -47,6 +47,7 @@ function BuilderContent() {
 
   const hasStartedGeneration = useRef(false);
   const currentPrompt = useRef<string | null>(null);
+  const initStarted = useRef(false); // Guard against StrictMode double-invocation
 
   // Track when we should transition from "creating" to "generating"
   useEffect(() => {
@@ -67,6 +68,8 @@ function BuilderContent() {
   // Initialize: create form and start generation for new forms with prompt
   useEffect(() => {
     async function initNewForm() {
+      // Guard against StrictMode double-invocation and concurrent calls
+      if (initStarted.current) return;
       if (formId !== "new" || phase !== "idle" || initializedFormId) return;
 
       // No prompt/template - just show builder normally
@@ -78,6 +81,8 @@ function BuilderContent() {
       currentPrompt.current = prompt;
 
       try {
+        initStarted.current = true; // Mark as started before async operation
+
         // Create form in database
         const newForm = await createForm.mutateAsync({
           title: "Untitled Form",
@@ -91,8 +96,8 @@ function BuilderContent() {
         // Clear sessionStorage now that we've consumed the prompt
         sessionStorage.removeItem("newFormPrompt");
 
-        // Update URL without query params using router.replace
-        router.replace(`/builder/${newFormId}`);
+        // Update URL without query params using history replaceState to prevent navigation state resets
+        window.history.replaceState(null, "", `/builder/${newFormId}`);
 
         setInitializedFormId(newFormId);
 
@@ -100,6 +105,7 @@ function BuilderContent() {
         // The useEffect watching hasStartedStreaming will transition to "generating"
       } catch (err) {
         console.error("Failed to create form:", err);
+        initStarted.current = false; // Reset so retry is possible
         setPhase("idle");
         setInitError(err instanceof Error ? err.message : "Failed to create form");
       }
@@ -156,26 +162,11 @@ function BuilderContent() {
     );
   }
 
-  // Phase: "creating" or "generating" with form created - show locked builder
-  if ((phase === "creating" || phase === "generating") && initializedFormId) {
-    const formData = form as { schema?: FormSchema } | null | undefined;
-    const currentSchema = schema || formData?.schema;
-
-    return (
-      <BuilderShell
-        formId={initializedFormId}
-        initialSchema={currentSchema}
-        initialMessage={currentPrompt.current}
-        isLocked={true}
-      />
-    );
-  }
-
-  // Existing forms or forms without prompt - normal builder
+  // Determine which ID to use for the form
   const displayFormId = formId !== "new" ? formId : initializedFormId;
 
-  // Loading state for existing forms
-  if (isLoading) {
+  // Loading state for existing forms (skip if initialized from new so it doesn't unmount BuilderShell)
+  if (isLoading && !initializedFormId) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -186,25 +177,24 @@ function BuilderContent() {
     );
   }
 
-  // Existing form loaded - normal builder
-  if (formId !== "new" && form) {
-    const formData = form as { schema: FormSchema };
-    return <BuilderShell formId={formId} initialSchema={formData.schema} />;
-  }
-
-  // New form without prompt - normal builder
-  if (formId === "new" && !prompt && !template) {
+  // Default empty form (no prompt or template)
+  const isDefaultNew = formId === "new" && !prompt && !template && !initializedFormId;
+  if (isDefaultNew) {
     return <BuilderShell formId="new" initialSchema={createEmptySchema()} />;
   }
 
-  // Phase: "done" or "idle" with initialized form - show normal builder
+  // Render the builder wrapper, ensuring we don't unmount between phases
   if (displayFormId) {
     const formData = form as { schema?: FormSchema } | null | undefined;
     const currentSchema = schema || formData?.schema;
+    const isLocked = (phase === "creating" || phase === "generating") && !!initializedFormId;
+
     return (
       <BuilderShell
         formId={displayFormId}
         initialSchema={currentSchema}
+        initialMessage={currentPrompt.current}
+        isLocked={isLocked}
       />
     );
   }
